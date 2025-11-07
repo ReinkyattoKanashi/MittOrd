@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MittOrd</string>
+    <string name="db_name">dictionary.db</string>
 </resources>

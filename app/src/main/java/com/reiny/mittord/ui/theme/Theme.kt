@@ -9,28 +9,39 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = Color(0xFFFFFFFF),
+    onPrimary = Color(0xFF121212),
+    primaryContainer = Color(0xFFEEEEEE),
+    onPrimaryContainer = Color(0xFF000000),
+    background = Color(0xFF000000),
+    surface = Color(0xFF121212),
+    surfaceVariant = Color(0xFFFEF7FF),
+    onBackground = Color(0xFFFFFFFF),
+    onSurface = Color.Black,
+    onSurfaceVariant = Color(0xFFFEF7FF),
+    outline = Color(0xFFD5DAE7),
+    outlineVariant = Color(0xFFD5DAE7),
+    scrim = Color(0xFF000000)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = Color(0xFF000000),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFEEEEEE),
+    onPrimaryContainer = Color(0xFF000000),
+    background = Color(0xFFEEEEEE),
+    surface = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFFFEF7FF),
+    onBackground = Color(0xFF000000),
+    onSurface = Color(0xFF000000),
+    onSurfaceVariant = Color(0xFFFEF7FF),
+    outline = Color(0xFFD5DAE7),
+    outlineVariant = Color(0xFFD5DAE7),
+    scrim = Color(0xFF000000)
 )
 
 @Composable
@@ -41,11 +52,6 @@ fun MittOrdTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
