@@ -1,5 +1,6 @@
 package com.reiny.mittord.ui.home.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,8 +25,9 @@ fun FloatingBottomNavigation(
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Surface(
             shape = RoundedCornerShape(50),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 8.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier
                 .padding(bottom = 24.dp)
                 .fillMaxWidth(0.85f)
@@ -60,7 +62,7 @@ fun FloatingBottomNavigation(
         FloatingActionButton(
             onClick = onExpandToggle,
             shape = CircleShape,
-            containerColor = Color.Black,
+            containerColor = MaterialTheme.colorScheme.primary,
             elevation = FloatingActionButtonDefaults.elevation(8.dp),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -70,7 +72,7 @@ fun FloatingBottomNavigation(
             Icon(
                 Icons.Default.Add,
                 contentDescription = "Add",
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(36.dp)
             )
         }
