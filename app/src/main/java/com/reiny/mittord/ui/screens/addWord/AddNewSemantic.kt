@@ -1,4 +1,4 @@
-package com.reiny.mittord.ui.addWord
+package com.reiny.mittord.ui.screens.addWord
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel

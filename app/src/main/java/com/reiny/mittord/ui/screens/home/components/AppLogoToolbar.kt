@@ -1,4 +1,4 @@
-package com.reiny.mittord.ui.home.components
+package com.reiny.mittord.ui.screens.home.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.material3.MaterialTheme

@@ -1,4 +1,8 @@
 [versions]
+applicationId = "com.reiny.mittord"
+versionName = "1.0"
+versionCode = "2"
+appName = "MittOrd"
 accompanistNavigationAnimation = "0.36.0"
 agp = "8.13.0"
 animation = "1.9.4"

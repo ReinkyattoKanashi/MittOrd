@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.api.ApkVariantOutputImpl
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -13,17 +15,20 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.reiny.mittord"
+        applicationId = libs.versions.applicationId.get()
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = libs.versions.versionCode.get().toInt()
+        versionName = libs.versions.versionName.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
-        release {
+        getByName("debug") {
+            versionNameSuffix = "-debug"
+        }
+        getByName("release") {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -31,6 +36,24 @@ android {
             )
         }
     }
+    applicationVariants.all {
+        this.outputs
+            .map { it as ApkVariantOutputImpl }
+            .forEach { output ->
+
+                val appName = libs.versions.appName.get()
+                val versionName = libs.versions.versionName.get()
+                val versionCode = libs.versions.versionCode.get().toInt()
+
+                val buildTypeName = this.buildType.name
+                val fileExtension = output.outputFileName.substringAfterLast('.', "")
+                val newName =
+                    "${appName}-${buildTypeName}-v${versionName}(${versionCode}).${fileExtension}"
+
+                output.outputFileName = newName
+            }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11

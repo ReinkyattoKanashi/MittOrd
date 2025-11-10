@@ -1,4 +1,4 @@
-package com.reiny.mittord.ui.settings
+package com.reiny.mittord.ui.screens.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons

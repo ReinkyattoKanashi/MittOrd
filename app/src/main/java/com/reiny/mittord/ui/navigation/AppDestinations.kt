@@ -1,15 +1,13 @@
 package com.reiny.mittord.ui.navigation
 
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.reiny.mittord.ui.home.MainScreen
-import com.reiny.mittord.ui.settings.SettingsScreen
+import com.reiny.mittord.ui.screens.home.MainScreen
+import com.reiny.mittord.ui.screens.settings.SettingsScreen
 
 object AppDestinations {
     const val MAIN = "main"

@@ -1,4 +1,4 @@
-package com.reiny.mittord.ui.home
+package com.reiny.mittord.ui.screens.home
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
