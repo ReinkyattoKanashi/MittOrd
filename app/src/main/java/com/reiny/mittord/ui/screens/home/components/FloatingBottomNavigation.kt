@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,6 +43,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.reiny.mittord.ui.animations.NavBarAnimation
 import com.reiny.mittord.utils.animateAlignmentAsState
 
 @Composable
@@ -72,22 +74,28 @@ fun FloatingBottomNavigationDefault(
 
         var parentWidth by remember { mutableIntStateOf(0) }
         val animatedWidth by animateDpAsState(
-            targetValue = if (state == BottomNavState.Default) 70.dp else parentWidth.dp
+            targetValue = if (state == BottomNavState.Default) 70.dp else parentWidth.dp,
+            animationSpec = NavBarAnimation.tweenDpSpec
         )
         val animatedPadding by animateDpAsState(
-            targetValue = if (state == BottomNavState.Default) 0.dp else 20.dp
+            targetValue = if (state == BottomNavState.Default) 0.dp else 20.dp,
+            animationSpec = NavBarAnimation.defaultDpTween
         )
         val rotation by animateFloatAsState(
-            targetValue = if (state == BottomNavState.Default) 0f else 45f
+            targetValue = if (state == BottomNavState.Default) 0f else 45f,
+            animationSpec = NavBarAnimation.tweenFloatSpec
         )
         val alignment by animateAlignmentAsState(
             targetValue = if (state == BottomNavState.Default) Alignment.Center else Alignment.CenterEnd,
+            animationSpec = NavBarAnimation.tweenFloatSpec
         )
         val iconsTint by animateColorAsState(
             targetValue = if (state == BottomNavState.Default) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary,
+            animationSpec = NavBarAnimation.defaultTweenColor
         )
         val alpha by animateFloatAsState(
             targetValue = if (state == BottomNavState.Default) 1f else 0f,
+            animationSpec = NavBarAnimation.defaultTween
         )
         Box(
             contentAlignment = Alignment.BottomCenter, modifier = Modifier
@@ -120,7 +128,8 @@ fun FloatingBottomNavigationDefault(
             }
 
             val animatedRowContentPadding by animateDpAsState(
-                targetValue = if (state == BottomNavState.Default) 32.dp else 20.dp
+                targetValue = if (state == BottomNavState.Default) 32.dp else 20.dp,
+                animationSpec = NavBarAnimation.defaultDpTween
             )
             Row(
                 modifier = Modifier
@@ -138,20 +147,17 @@ fun FloatingBottomNavigationDefault(
                     )
                 }
                 var text by remember { mutableStateOf("") }
-//                val alpha by animateFloatAsState(
-//                    targetValue = if (state == BottomNavState.Default) 0f else 1f,
-//                    label = "textFieldAlpha"
-//                )
                 CleanPrimaryTextField(
                     value = text,
                     onValueChange = { text = it },
                     placeholder = "Введите слово…",
                     modifier = Modifier
                         .weight(1f)
-                        .padding(end = 16.dp)
+                        .padding(end = 36.dp)
                         .alpha(1 - alpha),
                     enabled = state == BottomNavState.Search,
                 )
+                Spacer(modifier = Modifier.width(16.dp))
                 AnimatedVisibility(
                     visible = state == BottomNavState.Default,
                     enter = fadeIn(),
