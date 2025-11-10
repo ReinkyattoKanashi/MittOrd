@@ -33,7 +33,7 @@ object NavBarAnimation {
     )
 
     val tweenDpSpec = tween<Dp>(
-        durationMillis = DURATION + 100,
+        durationMillis = DURATION - 100,
         easing = FastOutSlowInEasing
     )
     val tweenFloatSpec = tween<Float>(
