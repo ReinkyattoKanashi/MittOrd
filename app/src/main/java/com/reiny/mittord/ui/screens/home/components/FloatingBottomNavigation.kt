@@ -31,7 +31,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,8 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.reiny.mittord.ui.animations.NavBarAnimation
 import com.reiny.mittord.utils.animateAlignmentAsState
@@ -72,9 +72,13 @@ fun FloatingBottomNavigationDefault(
                 .align(Alignment.Center)
         ) {}
 
-        var parentWidth by remember { mutableIntStateOf(0) }
+        var targetWidth by remember { mutableStateOf(70.dp) }
+
+        MeasureAvailableWidth(fraction = 0.85f) { width ->
+            targetWidth = width
+        }
         val animatedWidth by animateDpAsState(
-            targetValue = if (state == BottomNavState.Default) 70.dp else parentWidth.dp,
+            targetValue = if (state == BottomNavState.Default) 70.dp else targetWidth,
             animationSpec = NavBarAnimation.tweenDpSpec
         )
         val animatedPadding by animateDpAsState(
@@ -100,9 +104,7 @@ fun FloatingBottomNavigationDefault(
         Box(
             contentAlignment = Alignment.BottomCenter, modifier = Modifier
                 .fillMaxWidth(0.85f)
-                .onGloballyPositioned { coordinates ->
-                    parentWidth = coordinates.size.width
-                }) {
+        ) {
             Box(
                 modifier = Modifier
                     .height(70.dp)
@@ -176,6 +178,23 @@ fun FloatingBottomNavigationDefault(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MeasureAvailableWidth(
+    fraction: Float = 1f,
+    onWidthMeasured: (Dp) -> Unit
+) {
+    Layout(
+        content = {},
+        modifier = Modifier.fillMaxWidth(fraction)
+    ) { _, constraints ->
+        val widthPx = constraints.maxWidth
+        val widthDp = widthPx.toDp()
+        onWidthMeasured(widthDp)
+
+        layout(widthPx, 0) {}
     }
 }
 
