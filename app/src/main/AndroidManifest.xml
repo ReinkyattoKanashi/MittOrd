@@ -11,11 +11,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
 
-        android:theme="@style/Theme.MittOrd">
+        android:theme="@style/Theme.MittOrd.Splash">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.MittOrd"
+            android:theme="@style/Theme.MittOrd.Splash"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

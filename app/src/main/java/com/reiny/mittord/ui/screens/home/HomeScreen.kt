@@ -56,6 +56,9 @@ fun MainScreen(onSettingsClick: () -> Unit) {
                         state = BottomNavState.Default
                     } else {
                         // open Add Word screen
+                        if (state == BottomNavState.Default) {
+                            state = BottomNavState.Search
+                        }
                     }
                 },
                 onRightClick = {

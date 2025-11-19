@@ -1,5 +1,6 @@
 [versions]
 applicationId = "com.reiny.mittord"
+coreSplashscreen = "1.2.0"
 versionName = "1.0"
 versionCode = "3"
 appName = "MittOrd"
@@ -24,6 +25,7 @@ coreKtxVersion = "1.7.0"
 [libraries]
 accompanist-navigation-animation = { module = "com.google.accompanist:accompanist-navigation-animation", version.ref = "accompanistNavigationAnimation" }
 androidx-compose-animation = { module = "androidx.compose.animation:animation", version.ref = "animation" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
