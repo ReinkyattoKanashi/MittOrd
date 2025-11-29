@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,11 +47,14 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import com.reiny.mittord.ui.animations.NavBarAnimation
+import com.reiny.mittord.utils.height
+import com.reiny.mittord.utils.paddingLayout
 import com.reiny.mittord.utils.size
 
 @Composable
@@ -59,40 +63,76 @@ fun FloatingBottomNavigationDefault(
     onLeftClick: () -> Unit,
     onMiddleClick: () -> Unit,
     onRightClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    parentHeight: Dp
 ) {
+    val backgroundBoxHeight by animateDpAsState(
+        targetValue = if (state == BottomNavState.AddWord) parentHeight else 60.dp,
+        animationSpec = NavBarAnimation.slideDpSpec,
+        label = "backgroundBoxHeight"
+    )
+    val boxTopPadding by animateDpAsState(
+        targetValue = if (state == BottomNavState.AddWord) 35.dp else 0.dp,
+        animationSpec = NavBarAnimation.slideDpSpec,
+        label = "boxTopPadding"
+    )
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 24.dp)
-            .height(70.dp),
+            .height { backgroundBoxHeight + 10.dp },
         contentAlignment = Alignment.BottomCenter
     ) {
-        BackgroundSurface()
 
         var targetWidth by remember { mutableStateOf(70.dp) }
         MeasureAvailableWidth(fraction = 0.85f) { width ->
             targetWidth = width
         }
         val width by animateDpAsState(
-            targetValue = if (state == BottomNavState.Default) 70.dp else targetWidth,
+            targetValue =
+                when (state) {
+                    BottomNavState.Default -> 70.dp
+                    BottomNavState.Search -> targetWidth
+                    BottomNavState.AddWord -> 70.dp
+                },
             animationSpec = NavBarAnimation.defaultDpTween,
             label = "centerWidth"
         )
         val bias by animateFloatAsState(
-            targetValue = if (state == BottomNavState.Default) 0f else 1f,
+            targetValue =
+                when (state) {
+                    BottomNavState.Default -> 0f
+                    BottomNavState.Search -> 1f
+                    BottomNavState.AddWord -> 0f
+                },
             animationSpec = NavBarAnimation.tweenFloatSpec,
             label = "centerBias"
         )
         val rotation by animateFloatAsState(
-            targetValue = if (state == BottomNavState.Default) 0f else 45f,
+            targetValue = when (state) {
+                BottomNavState.Default -> 0f
+                BottomNavState.Search -> 45f
+                BottomNavState.AddWord -> 0f
+            },
             animationSpec = NavBarAnimation.tweenFloatSpec,
             label = "centerRotation"
         )
+        val offsetY by animateDpAsState(
+            targetValue = when (state) {
+                BottomNavState.Default -> 0.dp
+                BottomNavState.Search -> 0.dp
+                BottomNavState.AddWord -> 5.dp
+            },
+            animationSpec = NavBarAnimation.slideDpSpec,
+            label = "centerWidth"
+        )
         val iconsTint = rememberBottomNavTint(state)
 
+        BackgroundSurface(height = { backgroundBoxHeight }, { boxTopPadding }, bottomPadding = { offsetY })
         Box(
-            modifier = Modifier.fillMaxWidth(0.85f), contentAlignment = Alignment.BottomCenter
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .height { backgroundBoxHeight + 10.dp }
         ) {
             AnimatedCenterButton(
                 width = { width },
@@ -101,41 +141,55 @@ fun FloatingBottomNavigationDefault(
                 onMiddleClick = onMiddleClick
             )
 
-            NavIconsRow(
-                state = { state },
-                iconsTint = { iconsTint.value },
-                onLeftClick = onLeftClick,
-                onRightClick = onRightClick
-            )
+            Box(Modifier.fillMaxSize()
+                .align(Alignment.TopCenter), contentAlignment = Alignment.BottomCenter){
+                NavIconsRow(
+                    state = { state },
+                    iconsTint = { iconsTint.value },
+                    onLeftClick = onLeftClick,
+                    onRightClick = onRightClick
+                )
 
-            StaticSearchField(
-                state = { state })
+                StaticSearchField(
+                    state = { state })
+            }
+
         }
     }
 }
 
 @Composable
-private fun BoxScope.BackgroundSurface() {
+private fun BoxScope.BackgroundSurface(
+    height: () -> Dp,
+    topPadding: () -> Dp,
+    bottomPadding: () -> Dp
+) {
     Surface(
-        shape = RoundedCornerShape(50),
+        shape = RoundedCornerShape(30.dp),
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 4.dp,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth(0.85f)
-            .height(60.dp)
             .align(Alignment.Center)
+            .paddingLayout(top = { topPadding() }, bottom = { bottomPadding() })
+            .height { height() }
     ) {}
 }
 
 @Composable
-fun AnimatedCenterButton(
-    width: () -> Dp, rotation: () -> Float, bias: () -> Float, onMiddleClick: () -> Unit
+fun BoxScope.AnimatedCenterButton(
+    width: () -> Dp,
+    rotation: () -> Float,
+    bias: () -> Float,
+    onMiddleClick: () -> Unit
 ) {
+    val density = LocalDensity.current
     Box(
         modifier = Modifier
             .height(70.dp)
             .size { width() }
+            .align(Alignment.TopCenter)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.primary)
             .clickable { onMiddleClick() },
@@ -170,7 +224,8 @@ private fun NavIconsRow(
 
     Row(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .height { 70.dp }
             .layout { measurable, constraints ->
                 val paddingPx = animatedPadding.roundToPx()
                 val newConstraints = constraints.offset(
@@ -186,13 +241,17 @@ private fun NavIconsRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onLeftClick) {
-            Icon(
-                Icons.Default.Search, "Search", modifier = Modifier
-                    .size(34.dp)
-                    .graphicsLayer {
-                        colorFilter = ColorFilter.tint(iconsTint())
-                    })
+        AnimatedVisibility(
+            visible = state() != BottomNavState.AddWord, enter = fadeIn(), exit = fadeOut()
+        ) {
+            IconButton(onClick = onLeftClick) {
+                Icon(
+                    Icons.Default.Search, "Search", modifier = Modifier
+                        .size(34.dp)
+                        .graphicsLayer {
+                            colorFilter = ColorFilter.tint(iconsTint())
+                        })
+            }
         }
 
         Spacer(Modifier.weight(1f))
@@ -236,6 +295,13 @@ fun MeasureAvailableWidth(fraction: Float = 1f, onWidthMeasured: (Dp) -> Unit) {
         layout(c.maxWidth, 0) {}
     }
 }
+@Composable
+fun MeasureAvailableHeight(fraction: Float = 1f, onHeightMeasured: (Dp) -> Unit) {
+    Layout(content = {}, modifier = Modifier.fillMaxHeight(fraction)) { _, c ->
+        onHeightMeasured(c.maxHeight.toDp())
+        layout(0, c.maxHeight) {}
+    }
+}
 
 @Composable
 fun rememberBottomNavTint(state: BottomNavState): Animatable<Color, AnimationVector4D> {
@@ -261,7 +327,9 @@ fun PreviewBottomNav() {
         BottomNavState.Default,
         onLeftClick = {},
         onMiddleClick = {},
-        onRightClick = {})
+        onRightClick = {},
+        parentHeight = 700.dp
+    )
 }
 
 @Preview
@@ -271,5 +339,19 @@ fun PreviewBottomNavSearch() {
         BottomNavState.Search,
         onLeftClick = {},
         onMiddleClick = {},
-        onRightClick = {})
+        onRightClick = {},
+        parentHeight = 700.dp
+    )
+}
+
+@Preview
+@Composable
+fun PreviewBottomNavAddWord() {
+    FloatingBottomNavigationDefault(
+        BottomNavState.AddWord,
+        onLeftClick = {},
+        onMiddleClick = {},
+        onRightClick = {},
+        parentHeight = 490.dp
+    )
 }

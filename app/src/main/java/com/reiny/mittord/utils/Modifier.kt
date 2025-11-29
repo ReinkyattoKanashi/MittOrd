@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.constrain
+import androidx.compose.ui.unit.offset
 
 fun Modifier.width(width: () -> Dp) = dpSize { DpSize(width = width(), height = Dp.Unspecified) }
 fun Modifier.height(height: () -> Dp) = dpSize { DpSize(height = height(), width = Dp.Unspecified) }
@@ -68,3 +69,64 @@ private fun Density.targetConstraints(width: Dp, height: Dp, incomingConstraints
         )
     )
 }
+
+//fun Modifier.paddingLayout(all: () -> Dp) =
+//    paddingLayoutInternal(
+//        start = all,
+//        top = all,
+//        end = all,
+//        bottom = all
+//    )
+
+fun Modifier.paddingLayout(
+    horizontal: () -> Dp,
+    vertical: () -> Dp
+) =
+    paddingLayoutInternal(
+        start = horizontal,
+        end = horizontal,
+        top = vertical,
+        bottom = vertical
+    )
+
+fun Modifier.paddingLayout(
+    start: () -> Dp = { Dp.Unspecified },
+    top: () -> Dp = { Dp.Unspecified },
+    end: () -> Dp = { Dp.Unspecified },
+    bottom: () -> Dp = { Dp.Unspecified }
+) =
+    paddingLayoutInternal(
+        start = start,
+        top = top,
+        end = end,
+        bottom = bottom
+    )
+
+private fun Modifier.paddingLayoutInternal(
+    start: () -> Dp,
+    top: () -> Dp,
+    end: () -> Dp,
+    bottom: () -> Dp
+): Modifier = this.then(
+    Modifier.layout { measurable, constraints ->
+
+        val startPx = start().roundToPx()
+        val endPx = end().roundToPx()
+        val topPx = top().roundToPx()
+        val bottomPx = bottom().roundToPx()
+
+        val newConstraints = constraints.offset(
+            horizontal = -(startPx + endPx),
+            vertical = -(topPx + bottomPx)
+        )
+
+        val placeable = measurable.measure(newConstraints)
+
+        val width = placeable.width + startPx + endPx
+        val height = placeable.height + topPx + bottomPx
+
+        layout(width, height) {
+            placeable.placeRelative(startPx, topPx)
+        }
+    }
+)

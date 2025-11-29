@@ -1,5 +1,6 @@
 package com.reiny.mittord.ui.animations
 
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
@@ -39,5 +40,19 @@ object NavBarAnimation {
     val tweenFloatSpec = tween<Float>(
         durationMillis = DURATION - 100,
         easing = FastOutSlowInEasing
+    )
+
+    private val slideEasing: Easing = CubicBezierEasing(
+        0.20f, 0.00f, 0.00f, 1.00f
+    )
+
+    val slideDpSpec = tween<Dp>(
+        durationMillis = DURATION,
+        easing = slideEasing
+    )
+
+    val slideFloatSpec = tween<Float>(
+        durationMillis = DURATION,
+        easing = slideEasing
     )
 }

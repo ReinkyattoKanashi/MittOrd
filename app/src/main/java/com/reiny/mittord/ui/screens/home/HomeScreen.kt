@@ -15,15 +15,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.reiny.mittord.ui.screens.home.components.AppLogoToolbar
 import com.reiny.mittord.ui.screens.home.components.BottomNavState
 import com.reiny.mittord.ui.screens.home.components.EmptyListPlaceholder
 import com.reiny.mittord.ui.screens.home.components.FloatingBottomNavigationDefault
+import com.reiny.mittord.ui.screens.home.components.MeasureAvailableHeight
 
 @Composable
-fun MainScreen(onSettingsClick: () -> Unit, onAddWordClick: () -> Unit) {
-    var state by remember { mutableStateOf<BottomNavState>(BottomNavState.Default) }
+fun MainScreen(onSettingsClick: () -> Unit) {
+    var state by remember { mutableStateOf(BottomNavState.Default) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -44,6 +46,10 @@ fun MainScreen(onSettingsClick: () -> Unit, onAddWordClick: () -> Unit) {
                 .fillMaxSize()
         ) {
             EmptyListPlaceholder(Modifier.align(Alignment.Center))
+            var targetHeight by remember { mutableStateOf(0.dp) }
+            MeasureAvailableHeight(fraction = 1f) { height ->
+                targetHeight = height
+            }
             FloatingBottomNavigationDefault(
                 state = state,
                 onLeftClick = {
@@ -52,17 +58,32 @@ fun MainScreen(onSettingsClick: () -> Unit, onAddWordClick: () -> Unit) {
                     }
                 },
                 onMiddleClick = {
-                    if (state == BottomNavState.Search) {
-                        state = BottomNavState.Default
-                    } else {
-                        onAddWordClick()
+                    state = when (state) {
+                        BottomNavState.Search -> {
+                            BottomNavState.Default
+                        }
+
+                        BottomNavState.Default -> {
+                            BottomNavState.AddWord
+                        }
+
+                        BottomNavState.AddWord -> {
+                            BottomNavState.Default
+                        }
                     }
                 },
                 onRightClick = {
                     onSettingsClick()
                 },
-                modifier = Modifier.align(Alignment.BottomCenter)
+                modifier = Modifier.align(Alignment.BottomCenter),
+                targetHeight
             )
         }
     }
+}
+
+@Preview
+@Composable
+fun PreviewScreen(modifier: Modifier = Modifier) {
+    MainScreen(onSettingsClick = {})
 }

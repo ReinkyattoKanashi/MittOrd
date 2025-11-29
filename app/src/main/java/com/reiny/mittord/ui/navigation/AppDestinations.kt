@@ -13,7 +13,6 @@ import com.reiny.mittord.ui.screens.settings.SettingsScreen
 object AppDestinations {
     const val MAIN = "main"
     const val SETTINGS = "settings"
-    const val ADD_WORD = "add_word"
 }
 
 
@@ -37,15 +36,11 @@ fun AppNavHost(navController: NavHostController) {
     ) {
         composable(AppDestinations.MAIN) {
             MainScreen(
-                onSettingsClick = { navController.navigate(AppDestinations.SETTINGS) },
-                onAddWordClick = { navController.navigate(AppDestinations.ADD_WORD) }
+                onSettingsClick = { navController.navigate(AppDestinations.SETTINGS) }
             )
         }
         composable(AppDestinations.SETTINGS) {
             SettingsScreen(onBackClick = { navController.popBackStack() })
-        }
-        composable(AppDestinations.ADD_WORD) {
-            NewWordScreen(onBackClick = { navController.popBackStack() })
         }
     }
 }
