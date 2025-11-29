@@ -214,7 +214,7 @@ private fun BoxScope.StaticSearchField(
 ) {
     var text by remember { mutableStateOf("") }
 
-    CleanPrimaryTextField(
+    PrimaryTextField(
         value = text,
         onValueChange = { text = it },
         placeholder = "Введите слово…",
@@ -238,6 +238,16 @@ fun MeasureAvailableWidth(fraction: Float = 1f, onWidthMeasured: (Dp) -> Unit) {
 @Preview
 @Composable
 fun PreviewBottomNav() {
+    FloatingBottomNavigationDefault(
+        BottomNavState.Default,
+        onLeftClick = {},
+        onMiddleClick = {},
+        onRightClick = {}
+    )
+}
+@Preview
+@Composable
+fun PreviewBottomNavSearch() {
     FloatingBottomNavigationDefault(
         BottomNavState.Search,
         onLeftClick = {},

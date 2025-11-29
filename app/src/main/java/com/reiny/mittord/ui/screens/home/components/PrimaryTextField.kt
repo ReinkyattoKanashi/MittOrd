@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
-fun CleanPrimaryTextField(
+fun PrimaryTextField(
     modifier: Modifier = Modifier,
     value: String,
     onValueChange: (String) -> Unit,
@@ -53,7 +53,7 @@ fun CleanPrimaryTextField(
 @Preview
 @Composable
 fun CleanPrimaryTextFieldPreview(){
-    CleanPrimaryTextField(
+    PrimaryTextField(
         value = "Мой текст",
         onValueChange = {}
     )
