@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class ListViewModel @Inject constructor(
+class HomeViewModel @Inject constructor(
     private val runAsync: RunAsync,
     private val repository: DictionaryRepository,
     private val savedStateHandle: SavedStateHandle

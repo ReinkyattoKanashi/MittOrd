@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.reiny.mittord.ui.screens.addWord.AddNewWordViewModel
 import com.reiny.mittord.ui.screens.addWord.NewWordScreen
 import com.reiny.mittord.ui.screens.home.MainScreen
 import com.reiny.mittord.ui.screens.settings.SettingsScreen
