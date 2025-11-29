@@ -5,6 +5,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
-class AddNewSemantic @Inject constructor(
+class AddNewWordViewModel @Inject constructor(
 
 ) : ViewModel()

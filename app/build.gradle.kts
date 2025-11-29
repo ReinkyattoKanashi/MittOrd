@@ -95,4 +95,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     implementation(libs.androidx.core.splashscreen)
+    implementation(libs.compose.material.icons)
 }

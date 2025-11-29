@@ -22,7 +22,7 @@ import com.reiny.mittord.ui.screens.home.components.EmptyListPlaceholder
 import com.reiny.mittord.ui.screens.home.components.FloatingBottomNavigationDefault
 
 @Composable
-fun MainScreen(onSettingsClick: () -> Unit) {
+fun MainScreen(onSettingsClick: () -> Unit, onAddWordClick: () -> Unit) {
     var state by remember { mutableStateOf<BottomNavState>(BottomNavState.Default) }
 
     Scaffold(
@@ -55,10 +55,7 @@ fun MainScreen(onSettingsClick: () -> Unit) {
                     if (state == BottomNavState.Search) {
                         state = BottomNavState.Default
                     } else {
-                        // open Add Word screen
-                        if (state == BottomNavState.Default) {
-                            state = BottomNavState.Search
-                        }
+                        onAddWordClick()
                     }
                 },
                 onRightClick = {
