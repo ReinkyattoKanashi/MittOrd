@@ -22,9 +22,9 @@ import com.reiny.mittord.ui.theme.typography
 
 @Composable
 fun RoundedPrimaryButton(
+    modifier: Modifier = Modifier,
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {

@@ -36,10 +36,10 @@ import com.reiny.mittord.ui.theme.typography
 
 @Composable
 fun WordInputField(
+    modifier: Modifier = Modifier,
     value: String,
     onValueChange: (String) -> Unit,
-    placeholder: String = "Введите слово",
-    modifier: Modifier = Modifier,
+    placeholder: String = "",
     iconTint: Color = MaterialTheme.colorScheme.primary,
     borderColor: Color = MaterialTheme.colorScheme.outline,
     textStyle: TextStyle = Theme.typography.body,
@@ -73,8 +73,6 @@ fun WordInputField(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
-                // ICON LEFT — clickable
                 Box(
                     modifier = Modifier
                         .size(24.dp)
