@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,6 +55,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import com.reiny.mittord.ui.animations.NavBarAnimation
+import com.reiny.mittord.ui.theme.MittOrdTheme
+import com.reiny.mittord.ui.theme.Theme
+import com.reiny.mittord.ui.theme.typography
 import com.reiny.mittord.utils.height
 import com.reiny.mittord.utils.paddingLayout
 import com.reiny.mittord.utils.size
@@ -128,7 +133,11 @@ fun FloatingBottomNavigationDefault(
         )
         val iconsTint = rememberBottomNavTint(state)
 
-        BackgroundSurface(height = { backgroundBoxHeight }, { boxTopPadding }, bottomPadding = { offsetY })
+        BackgroundSurface(
+            state = { state },
+            height = { backgroundBoxHeight },
+            { boxTopPadding },
+            bottomPadding = { offsetY })
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
@@ -141,8 +150,11 @@ fun FloatingBottomNavigationDefault(
                 onMiddleClick = onMiddleClick
             )
 
-            Box(Modifier.fillMaxSize()
-                .align(Alignment.TopCenter), contentAlignment = Alignment.BottomCenter){
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .align(Alignment.TopCenter), contentAlignment = Alignment.BottomCenter
+            ) {
                 NavIconsRow(
                     state = { state },
                     iconsTint = { iconsTint.value },
@@ -160,6 +172,7 @@ fun FloatingBottomNavigationDefault(
 
 @Composable
 private fun BoxScope.BackgroundSurface(
+    state: () -> BottomNavState,
     height: () -> Dp,
     topPadding: () -> Dp,
     bottomPadding: () -> Dp
@@ -174,7 +187,23 @@ private fun BoxScope.BackgroundSurface(
             .align(Alignment.Center)
             .paddingLayout(top = { topPadding() }, bottom = { bottomPadding() })
             .height { height() }
-    ) {}
+    ) {
+        Column(
+            modifier = Modifier,
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(35.dp))
+            AnimatedVisibility(state() == BottomNavState.AddWord) {
+                Text(
+                    "Add word",
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = Theme.typography.h1
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -284,6 +313,7 @@ private fun BoxScope.StaticSearchField(
                 .fillMaxSize()
                 .padding(start = 70.dp, end = 70.dp)
                 .align(Alignment.CenterStart),
+            style = Theme.typography.h2
         )
     }
 }
@@ -295,6 +325,7 @@ fun MeasureAvailableWidth(fraction: Float = 1f, onWidthMeasured: (Dp) -> Unit) {
         layout(c.maxWidth, 0) {}
     }
 }
+
 @Composable
 fun MeasureAvailableHeight(fraction: Float = 1f, onHeightMeasured: (Dp) -> Unit) {
     Layout(content = {}, modifier = Modifier.fillMaxHeight(fraction)) { _, c ->
@@ -323,35 +354,41 @@ fun rememberBottomNavTint(state: BottomNavState): Animatable<Color, AnimationVec
 @Preview
 @Composable
 fun PreviewBottomNav() {
-    FloatingBottomNavigationDefault(
-        BottomNavState.Default,
-        onLeftClick = {},
-        onMiddleClick = {},
-        onRightClick = {},
-        parentHeight = 700.dp
-    )
+    MittOrdTheme {
+        FloatingBottomNavigationDefault(
+            BottomNavState.Default,
+            onLeftClick = {},
+            onMiddleClick = {},
+            onRightClick = {},
+            parentHeight = 700.dp
+        )
+    }
 }
 
 @Preview
 @Composable
 fun PreviewBottomNavSearch() {
-    FloatingBottomNavigationDefault(
-        BottomNavState.Search,
-        onLeftClick = {},
-        onMiddleClick = {},
-        onRightClick = {},
-        parentHeight = 700.dp
-    )
+    MittOrdTheme {
+        FloatingBottomNavigationDefault(
+            BottomNavState.Search,
+            onLeftClick = {},
+            onMiddleClick = {},
+            onRightClick = {},
+            parentHeight = 700.dp
+        )
+    }
 }
 
 @Preview
 @Composable
 fun PreviewBottomNavAddWord() {
-    FloatingBottomNavigationDefault(
-        BottomNavState.AddWord,
-        onLeftClick = {},
-        onMiddleClick = {},
-        onRightClick = {},
-        parentHeight = 490.dp
-    )
+    MittOrdTheme {
+        FloatingBottomNavigationDefault(
+            BottomNavState.AddWord,
+            onLeftClick = {},
+            onMiddleClick = {},
+            onRightClick = {},
+            parentHeight = 490.dp
+        )
+    }
 }

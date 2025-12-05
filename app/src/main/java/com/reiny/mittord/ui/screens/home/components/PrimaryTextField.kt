@@ -7,7 +7,10 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
+import com.reiny.mittord.ui.theme.Theme
+import com.reiny.mittord.ui.theme.typography
 
 @Composable
 fun PrimaryTextField(
@@ -15,7 +18,8 @@ fun PrimaryTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String = "",
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    style: TextStyle = Theme.typography.body
 ) {
     TextField(
         value = value,
@@ -27,7 +31,8 @@ fun PrimaryTextField(
             if (placeholder.isNotEmpty()) {
                 Text(
                     text = placeholder,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
+                    style = style
                 )
             }
         },
@@ -46,7 +51,8 @@ fun PrimaryTextField(
             unfocusedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
             disabledTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
             cursorColor = MaterialTheme.colorScheme.onPrimary
-        )
+        ),
+        textStyle = style
     )
 }
 
