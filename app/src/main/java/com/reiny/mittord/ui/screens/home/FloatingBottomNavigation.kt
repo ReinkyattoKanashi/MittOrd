@@ -1,13 +1,18 @@
-package com.reiny.mittord.ui.screens.home.components
+package com.reiny.mittord.ui.screens.home
 
 import androidx.compose.animation.Animatable
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector4D
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -55,8 +62,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import com.reiny.mittord.ui.animations.NavBarAnimation
+import com.reiny.mittord.ui.screens.home.components.BottomNavState
+import com.reiny.mittord.ui.screens.home.components.PrimaryTextField
+import com.reiny.mittord.ui.screens.home.components.RoundedPrimaryButton
+import com.reiny.mittord.ui.screens.home.components.WordInputField
 import com.reiny.mittord.ui.theme.MittOrdTheme
 import com.reiny.mittord.ui.theme.Theme
+import com.reiny.mittord.ui.theme.colors
 import com.reiny.mittord.ui.theme.typography
 import com.reiny.mittord.utils.height
 import com.reiny.mittord.utils.paddingLayout
@@ -177,6 +189,14 @@ private fun BoxScope.BackgroundSurface(
     topPadding: () -> Dp,
     bottomPadding: () -> Dp
 ) {
+    val isExpanded = state() == BottomNavState.AddWord
+
+    val expansionProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = tween(350),
+        label = "expansionProgress"
+    )
+
     Surface(
         shape = RoundedCornerShape(30.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -187,22 +207,54 @@ private fun BoxScope.BackgroundSurface(
             .align(Alignment.Center)
             .paddingLayout(top = { topPadding() }, bottom = { bottomPadding() })
             .height { height() }
+            .clip(RoundedCornerShape(30.dp))
     ) {
-        Column(
-            modifier = Modifier,
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 35.dp)
         ) {
-            Spacer(modifier = Modifier.height(35.dp))
-            AnimatedVisibility(state() == BottomNavState.AddWord) {
-                Text(
-                    "Add word",
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = Theme.typography.h1
-                )
+            Box(
+                modifier = Modifier
+                    .graphicsLayer {
+                        val maxOffset = 200.dp.toPx()
+                        translationY = (1f - expansionProgress) * maxOffset
+                    }
+                    .alpha(expansionProgress)
+            ) {
+                AddWordContent()
             }
         }
+    }
+}
+
+@Composable
+private fun AddWordContent() {
+    Column(
+        modifier = Modifier.fillMaxHeight(),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "Add word",
+            modifier = Modifier.padding(16.dp),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = Theme.typography.h1
+        )
+        WordInputField(
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp),
+            value = "",
+            onValueChange = { },
+            onIconClick = { },
+            borderColor = Theme.colors.primary
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        RoundedPrimaryButton(
+            modifier = Modifier.padding(bottom = 2.dp),
+            text = "Add",
+            onClick = { },
+            enabled = true
+        )
     }
 }
 
@@ -379,7 +431,7 @@ fun PreviewBottomNavSearch() {
     }
 }
 
-@Preview
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
 fun PreviewBottomNavAddWord() {
     MittOrdTheme {

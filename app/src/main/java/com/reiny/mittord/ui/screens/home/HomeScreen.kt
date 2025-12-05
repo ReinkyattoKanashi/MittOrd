@@ -20,8 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.reiny.mittord.ui.screens.home.components.AppLogoToolbar
 import com.reiny.mittord.ui.screens.home.components.BottomNavState
 import com.reiny.mittord.ui.screens.home.components.EmptyListPlaceholder
-import com.reiny.mittord.ui.screens.home.components.FloatingBottomNavigationDefault
-import com.reiny.mittord.ui.screens.home.components.MeasureAvailableHeight
+import com.reiny.mittord.ui.theme.MittOrdTheme
 
 @Composable
 fun MainScreen(onSettingsClick: () -> Unit) {
@@ -85,5 +84,7 @@ fun MainScreen(onSettingsClick: () -> Unit) {
 @Preview
 @Composable
 fun PreviewScreen(modifier: Modifier = Modifier) {
-    MainScreen(onSettingsClick = {})
+    MittOrdTheme {
+        MainScreen(onSettingsClick = {})
+    }
 }
