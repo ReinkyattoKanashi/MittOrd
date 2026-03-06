@@ -1,7 +1,6 @@
 package com.reiny.mittord.database.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
@@ -26,7 +25,7 @@ interface SemanticObjectDao {
         baseWord: String,
         comment: String?,
         translations: List<Pair<String, String>> // (languageCode, text)
-    ) {
+    ): Long {
         val objectId = insertObject(
             SemanticObjectEntity(baseWord = baseWord, comment = comment)
         )
@@ -35,6 +34,7 @@ interface SemanticObjectDao {
                 TranslationEntity(objectId = objectId, languageCode = lang, text = text)
             )
         }
+        return objectId
     }
 
     // ---------- GET ----------
@@ -42,51 +42,29 @@ interface SemanticObjectDao {
     @Query("SELECT * FROM semantic_object ORDER BY createdAt DESC")
     suspend fun getAllObjects(): List<SemanticObjectEntity>
 
-    @Query("SELECT * FROM translation WHERE objectId = :objectId ORDER BY languageCode ASC")
-    suspend fun getTranslationsForObject(objectId: Long): List<TranslationEntity>
+    @Transaction
+    @Query("SELECT * FROM semantic_object ORDER BY createdAt DESC")
+    suspend fun getAllObjectsWithTranslations(): List<SemanticObjectWithTranslations>
 
     @Transaction
-    @Query("SELECT * FROM semantic_object WHERE isFavorite = 1 ORDER BY createdAt DESC")
-    suspend fun getFavorites(): List<SemanticObjectWithTranslations>
+    @Query("SELECT * FROM semantic_object WHERE id = :id")
+    suspend fun getObjectWithTranslations(id: Long): SemanticObjectWithTranslations?
 
-    @Query("SELECT * FROM translation WHERE languageCode = :lang ORDER BY text ASC")
-    suspend fun getTranslationsByLanguage(lang: String): List<TranslationEntity>
+    @Query("SELECT * FROM translation WHERE objectId = :objectId ORDER BY languageCode ASC")
+    suspend fun getTranslationsForObject(objectId: Long): List<TranslationEntity>
 
     // ---------- UPDATE ----------
 
     @Update
     suspend fun updateObject(obj: SemanticObjectEntity)
 
-    @Update
-    suspend fun updateTranslation(translation: TranslationEntity)
-
-    @Query("UPDATE translation SET text = :newText WHERE id = :translationId")
-    suspend fun updateTranslationText(translationId: Long, newText: String)
-
-    @Query("UPDATE semantic_object SET isFavorite = :isFav WHERE id = :objectId")
-    suspend fun updateFavorite(objectId: Long, isFav: Boolean)
+    @Query("UPDATE semantic_object SET wordLanguageCode = :code WHERE id = :id")
+    suspend fun updateLanguageCode(id: Long, code: String)
 
     // ---------- DELETE ----------
 
-    @Delete
-    suspend fun deleteObject(obj: SemanticObjectEntity)
-
-    @Delete
-    suspend fun deleteTranslation(translation: TranslationEntity)
-
-    @Transaction
-    suspend fun deleteTranslationAndMaybeObject(
-        translation: TranslationEntity
-    ) {
-        deleteTranslation(translation)
-        val remaining = getTranslationsCount(translation.objectId)
-        if (remaining == 0) {
-            deleteObjectById(translation.objectId)
-        }
-    }
-
-    @Query("SELECT COUNT(*) FROM translation WHERE objectId = :objectId")
-    suspend fun getTranslationsCount(objectId: Long): Int
+    @Query("DELETE FROM translation WHERE objectId = :objectId")
+    suspend fun deleteAllTranslationsForObject(objectId: Long)
 
     @Query("DELETE FROM semantic_object WHERE id = :id")
     suspend fun deleteObjectById(id: Long)

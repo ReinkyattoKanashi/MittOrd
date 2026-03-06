@@ -27,6 +27,7 @@ android {
     buildTypes {
         getByName("debug") {
             versionNameSuffix = "-debug"
+            applicationIdSuffix = ".debug"
         }
         getByName("release") {
             isMinifyEnabled = false
@@ -34,6 +35,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     applicationVariants.all {
@@ -63,6 +65,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -96,4 +99,6 @@ dependencies {
 
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.compose.material.icons)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
 }

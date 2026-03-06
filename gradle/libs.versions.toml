@@ -1,8 +1,8 @@
 [versions]
 applicationId = "com.reiny.mittord"
 coreSplashscreen = "1.2.0"
-versionName = "1.0"
-versionCode = "5"
+versionName = "1.0.1"
+versionCode = "6"
 appName = "MittOrd"
 accompanistNavigationAnimation = "0.36.0"
 agp = "8.13.0"
@@ -21,7 +21,7 @@ navigationCompose = "2.9.6"
 room = "2.8.4"
 ksp = "2.0.21-1.0.27"
 coreKtxVersion = "1.7.0"
-
+coil = "2.7.0"
 [libraries]
 accompanist-navigation-animation = { module = "com.google.accompanist:accompanist-navigation-animation", version.ref = "accompanistNavigationAnimation" }
 androidx-compose-animation = { module = "androidx.compose.animation:animation", version.ref = "animation" }
@@ -49,6 +49,9 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 core-ktx = { group = "androidx.test", name = "core-ktx", version.ref = "coreKtxVersion" }
 compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core" }
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
