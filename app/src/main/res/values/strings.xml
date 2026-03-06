@@ -27,6 +27,8 @@
     <!-- Empty list placeholder -->
     <string name="empty_title">No words added</string>
     <string name="empty_subtitle">Tap the + button to add a new word</string>
+    <string name="empty_search_title">Nothing found</string>
+    <string name="empty_search_subtitle">No words match your search</string>
 
     <!-- Word detail screen -->
     <string name="screen_edit_word">Edit word</string>

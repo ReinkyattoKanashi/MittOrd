@@ -6,6 +6,7 @@ import com.reiny.mittord.database.DictionaryRepository
 import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
 import com.reiny.mittord.ui.screens.wordDetail.detectLanguage
 import com.reiny.mittord.util.AppConstants
+import com.reiny.mittord.util.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,7 +23,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: DictionaryRepository
+    private val repository: DictionaryRepository,
+    private val appPrefs: AppPreferences
 ) : ViewModel() {
 
     private val _words = MutableStateFlow<List<SemanticObjectWithTranslations>>(emptyList())
@@ -132,6 +134,9 @@ class HomeViewModel @Inject constructor(
             _translationLanguageCode.value = code
         }
     }
+
+    fun addRecentLanguage(name: String) = appPrefs.addRecentLanguage(name)
+    fun orderedLanguages() = appPrefs.orderedLanguages()
 
     fun onSearchChange(value: String) { _searchQuery.value = value }
 

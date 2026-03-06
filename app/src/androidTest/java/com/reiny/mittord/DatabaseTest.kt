@@ -32,7 +32,6 @@ class DatabaseTest {
 
     @Test
     fun insert_Retrieve() = runBlocking {
-        // 1️⃣ Вставляем объект и переводы
         dao.insertObjectWithTranslations(
             baseWord = "cat",
             comment = "животное",
@@ -43,13 +42,11 @@ class DatabaseTest {
             )
         )
 
-        // 2️⃣ Проверяем, что объект добавлен
         val allObjects = dao.getAllObjects()
         Assert.assertEquals(1, allObjects.size)
         Assert.assertEquals("cat", allObjects.first().baseWord)
         Assert.assertEquals("животное", allObjects.first().comment)
 
-        // 3️⃣ Проверяем переводы
         val objectId = allObjects.first().id
         val translations = dao.getTranslationsForObject(objectId)
         Assert.assertEquals(3, translations.size)
@@ -60,7 +57,6 @@ class DatabaseTest {
 
     @Test
     fun update_delete_removeObject() = runBlocking {
-        // 1️⃣ Создаём объект с одним переводом
         dao.insertObjectWithTranslations(
             baseWord = "dog",
             comment = "животное",
@@ -69,12 +65,10 @@ class DatabaseTest {
         val obj = dao.getAllObjects().first()
         val translation = dao.getTranslationsForObject(obj.id).first()
 
-        // 2️⃣ Обновляем флаг избранного
         dao.updateFavorite(obj.id, true)
         val updated = dao.getAllObjects().first()
         Assert.assertTrue(updated.isFavorite)
 
-        // 3️⃣ Удаляем перевод — объект должен удалиться тоже
         dao.deleteTranslationAndMaybeObject(translation)
 
         val remainingObjects = dao.getAllObjects()

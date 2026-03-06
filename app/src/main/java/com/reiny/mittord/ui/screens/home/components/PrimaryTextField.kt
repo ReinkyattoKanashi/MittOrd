@@ -20,7 +20,9 @@ fun PrimaryTextField(
     placeholder: String = "",
     enabled: Boolean = true,
     style: TextStyle = Theme.typography.body,
-    trailingIcon: @Composable (() -> Unit)? = null
+    trailingIcon: @Composable (() -> Unit)? = null,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    cursorColor: Color = MaterialTheme.colorScheme.primary
 ) {
     TextField(
         value = value,
@@ -32,7 +34,7 @@ fun PrimaryTextField(
             if (placeholder.isNotEmpty()) {
                 Text(
                     text = placeholder,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    color = contentColor.copy(alpha = 0.4f),
                     style = style
                 )
             }
@@ -49,10 +51,10 @@ fun PrimaryTextField(
             disabledIndicatorColor = Color.Transparent,
             errorIndicatorColor = Color.Transparent,
 
-            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-            unfocusedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-            disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            cursorColor = MaterialTheme.colorScheme.primary
+            focusedTextColor = contentColor,
+            unfocusedTextColor = contentColor.copy(alpha = 0.8f),
+            disabledTextColor = contentColor.copy(alpha = 0.5f),
+            cursorColor = cursorColor
         ),
         textStyle = style
     )
@@ -62,7 +64,7 @@ fun PrimaryTextField(
 @Composable
 fun CleanPrimaryTextFieldPreview() {
     PrimaryTextField(
-        value = "Мой текст",
+        value = "Hello world",
         onValueChange = {}
     )
 }

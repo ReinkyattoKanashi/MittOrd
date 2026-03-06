@@ -69,7 +69,9 @@ import com.reiny.mittord.ui.screens.home.components.SearchState
 import com.reiny.mittord.ui.screens.home.components.PrimaryTextField
 import com.reiny.mittord.ui.screens.home.components.RoundedPrimaryButton
 import com.reiny.mittord.ui.screens.home.components.WordInputField
+import com.reiny.mittord.ui.screens.settings.Language
 import com.reiny.mittord.ui.screens.settings.LanguagePickerSheet
+import com.reiny.mittord.ui.screens.settings.LANGUAGES
 import com.reiny.mittord.ui.screens.wordDetail.LANG_NAME_TO_BCP47
 import com.reiny.mittord.ui.screens.wordDetail.flagForCode
 import com.reiny.mittord.ui.screens.wordDetail.langNameForCode
@@ -78,9 +80,9 @@ import com.reiny.mittord.ui.theme.Theme
 import com.reiny.mittord.ui.theme.colors
 import com.reiny.mittord.ui.theme.typography
 import com.reiny.mittord.util.AppConstants
-import com.reiny.mittord.utils.height
-import com.reiny.mittord.utils.paddingLayout
-import com.reiny.mittord.utils.size
+import com.reiny.mittord.util.height
+import com.reiny.mittord.util.paddingLayout
+import com.reiny.mittord.util.size
 
 @Composable
 fun FloatingBottomNavigationDefault(
@@ -90,6 +92,8 @@ fun FloatingBottomNavigationDefault(
     onRightClick: () -> Unit,
     addWord: AddWordState,
     search: SearchState,
+    orderedLanguages: List<Language>,
+    addRecentLanguage: (String) -> Unit,
     modifier: Modifier = Modifier,
     parentHeight: Dp
 ) {
@@ -165,7 +169,9 @@ fun FloatingBottomNavigationDefault(
             height = { backgroundBoxHeight },
             topPadding = { boxTopPadding },
             bottomPadding = { offsetY },
-            addWord = addWord
+            addWord = addWord,
+            orderedLanguages = orderedLanguages,
+            addRecentLanguage = addRecentLanguage
         )
         Box(
             modifier = Modifier
@@ -208,7 +214,9 @@ private fun BoxScope.BackgroundSurface(
     height: () -> Dp,
     topPadding: () -> Dp,
     bottomPadding: () -> Dp,
-    addWord: AddWordState
+    addWord: AddWordState,
+    orderedLanguages: List<Language>,
+    addRecentLanguage: (String) -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(30.dp),
@@ -229,7 +237,9 @@ private fun BoxScope.BackgroundSurface(
         ) {
             AddWordContent(
                 isExpanded = state() == BottomNavState.AddWord,
-                addWord = addWord
+                addWord = addWord,
+                orderedLanguages = orderedLanguages,
+                addRecentLanguage = addRecentLanguage
             )
         }
     }
@@ -239,7 +249,9 @@ private fun BoxScope.BackgroundSurface(
 @Composable
 private fun AddWordContent(
     isExpanded: Boolean,
-    addWord: AddWordState
+    addWord: AddWordState,
+    orderedLanguages: List<Language>,
+    addRecentLanguage: (String) -> Unit
 ) {
     val wordFocusRequester = remember { FocusRequester() }
     var showLanguagePicker by remember { mutableStateOf(false) }
@@ -333,7 +345,9 @@ private fun AddWordContent(
             selected = langNameForCode(addWord.wordLanguageCode) ?: "",
             isAutoSelected = addWord.wordLanguageIsAuto,
             showAutoOption = true,
+            orderedLanguages = orderedLanguages,
             onSelect = { name ->
+                name?.let { addRecentLanguage(it) }
                 addWord.onWordLanguageSelected(name?.let { LANG_NAME_TO_BCP47[it] ?: it })
                 showLanguagePicker = false
             },
@@ -347,7 +361,9 @@ private fun AddWordContent(
             selected = langNameForCode(addWord.translationLanguageCode) ?: "",
             isAutoSelected = addWord.translationLanguageIsAuto,
             showAutoOption = true,
+            orderedLanguages = orderedLanguages,
             onSelect = { name ->
+                name?.let { addRecentLanguage(it) }
                 addWord.onTranslationLanguageSelected(name?.let { LANG_NAME_TO_BCP47[it] ?: it })
                 showTranslationPicker = false
             },
@@ -492,7 +508,9 @@ private fun BoxScope.StaticSearchField(
                 modifier = Modifier
                     .weight(1f)
                     .focusRequester(focusRequester),
-                style = Theme.typography.h2
+                style = Theme.typography.h2,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                cursorColor = MaterialTheme.colorScheme.onPrimary
             )
             if (search.query.isNotEmpty()) {
                 IconButton(onClick = search.onClear) {
@@ -566,6 +584,8 @@ fun PreviewBottomNav() {
             onLeftClick = {}, onMiddleClick = {}, onRightClick = {},
             addWord = previewAddWord(),
             search = SearchState("", {}, {}),
+            orderedLanguages = LANGUAGES,
+            addRecentLanguage = {},
             parentHeight = 700.dp
         )
     }
@@ -580,6 +600,8 @@ fun PreviewBottomNavSearch() {
             onLeftClick = {}, onMiddleClick = {}, onRightClick = {},
             addWord = previewAddWord(),
             search = SearchState("hund", {}, {}),
+            orderedLanguages = LANGUAGES,
+            addRecentLanguage = {},
             parentHeight = 700.dp
         )
     }
@@ -594,6 +616,8 @@ fun PreviewBottomNavAddWord() {
             onLeftClick = {}, onMiddleClick = {}, onRightClick = {},
             addWord = previewAddWord(wordInput = "hund", wordLanguageCode = "no"),
             search = SearchState("", {}, {}),
+            orderedLanguages = LANGUAGES,
+            addRecentLanguage = {},
             parentHeight = 490.dp
         )
     }

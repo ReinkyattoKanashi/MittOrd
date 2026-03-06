@@ -34,7 +34,6 @@ class DataBaseScenarioTest {
 
     @Test
     fun fullCrudScenario() = runBlocking {
-        // 1. Добавляем первое слово с одним переводом
         dao.insertObjectWithTranslations(
             baseWord = "cat",
             comment = null,
@@ -50,7 +49,6 @@ class DataBaseScenarioTest {
         assertEquals("en", firstTranslations[0].languageCode)
         assertEquals("cat", firstTranslations[0].text)
 
-        // 2. Редактируем первое слово — добавляем новый перевод (no)
         dao.insertTranslation(
             TranslationEntity(
                 objectId = firstId,
@@ -62,7 +60,6 @@ class DataBaseScenarioTest {
         assertEquals(2, firstTranslations.size)
         assertTrue(firstTranslations.any { it.languageCode == "no" && it.text == "katt" })
 
-        // 3. Добавляем второе слово
         dao.insertObjectWithTranslations(
             baseWord = "dog",
             comment = null,
@@ -73,9 +70,6 @@ class DataBaseScenarioTest {
         assertEquals(2, objects.size)
         val secondId = objects.single { it.baseWord == "dog" }.id
 
-        // 4. Редактируем первое слово:
-        //    - добавляем комментарий
-        //    - меняем один из переводов (en: cat -> kitty)
         val firstObject = objects.single { it.id == firstId }
         dao.updateObject(firstObject.copy(comment = "Домашнее животное"))
         var updatedFirst = dao.getAllObjects().single { it.id == firstId }
@@ -89,7 +83,6 @@ class DataBaseScenarioTest {
         val updatedEnFirst = firstTranslations.single { it.languageCode == "en" }
         assertEquals("kitty", updatedEnFirst.text)
 
-        // 5. Редактируем второе слово — добавляем новый перевод (no)
         dao.insertTranslation(
             TranslationEntity(
                 objectId = secondId,
@@ -101,7 +94,6 @@ class DataBaseScenarioTest {
         assertEquals(2, secondTranslations.size)
         assertTrue(secondTranslations.any { it.languageCode == "no" && it.text == "hund" })
 
-        // 6. Редактируем второе слово — удаляем старый перевод (en)
         val enSecond = secondTranslations.single { it.languageCode == "en" }
         dao.deleteTranslationAndMaybeObject(enSecond)
 
@@ -110,7 +102,6 @@ class DataBaseScenarioTest {
         assertEquals("no", secondTranslations[0].languageCode)
         assertEquals("hund", secondTranslations[0].text)
 
-        // 7. Удаляем оставшийся перевод второго слова — объект должен удалиться целиком
         val lastSecond = secondTranslations[0]
         dao.deleteTranslationAndMaybeObject(lastSecond)
 
@@ -120,7 +111,6 @@ class DataBaseScenarioTest {
         secondTranslations = dao.getTranslationsForObject(secondId)
         assertTrue(secondTranslations.isEmpty())
 
-        // 8. Получаем список всех слов — должен остаться только первый
         objects = dao.getAllObjects()
         assertEquals(1, objects.size)
         updatedFirst = objects.single()
@@ -128,7 +118,6 @@ class DataBaseScenarioTest {
         assertEquals("cat", updatedFirst.baseWord)
         assertEquals("Домашнее животное", updatedFirst.comment)
 
-        // 9. Получаем все переводы для первого слова — их должно быть 2 (en + no)
         firstTranslations = dao.getTranslationsForObject(firstId)
         assertEquals(2, firstTranslations.size)
 

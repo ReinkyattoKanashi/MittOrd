@@ -127,8 +127,6 @@ fun WordInputField(
                     contentAlignment = Alignment.Center
                 ) {
                     if (flagEmoji != null) {
-                        // Auto-detected: slightly faded (might still change)
-                        // Manually selected: full opacity (locked)
                         val alpha = if (isAutoLanguage) 0.6f else 1f
                         Text(
                             text = flagEmoji,

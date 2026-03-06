@@ -8,6 +8,14 @@ import javax.inject.Inject
 
 data class TranslationData(val text: String, val languageCode: String?)
 
+data class WordUpdate(
+    val baseWord: String,
+    val translations: List<TranslationData>,
+    val comment: String?,
+    val imagePath: String?,
+    val wordLanguageCode: String?
+)
+
 interface DictionaryRepository {
 
     suspend fun list(): List<SemanticObjectEntity>
@@ -16,14 +24,7 @@ interface DictionaryRepository {
     suspend fun getTranslations(objectId: Long): List<TranslationEntity>
     suspend fun addWord(baseWord: String, translation: String, translationLanguageCode: String? = null): Long
     suspend fun updateLanguageCode(id: Long, code: String)
-    suspend fun updateWordFull(
-        id: Long,
-        baseWord: String,
-        translations: List<TranslationData>,
-        comment: String?,
-        imagePath: String?,
-        wordLanguageCode: String?
-    )
+    suspend fun updateWordFull(id: Long, update: WordUpdate)
     suspend fun deleteWord(id: Long)
 
     class Base @Inject constructor(
@@ -52,25 +53,18 @@ interface DictionaryRepository {
         override suspend fun updateLanguageCode(id: Long, code: String) =
             dao.updateLanguageCode(id, code)
 
-        override suspend fun updateWordFull(
-            id: Long,
-            baseWord: String,
-            translations: List<TranslationData>,
-            comment: String?,
-            imagePath: String?,
-            wordLanguageCode: String?
-        ) {
+        override suspend fun updateWordFull(id: Long, update: WordUpdate) {
             val existing = dao.getObjectWithTranslations(id) ?: return
             dao.updateObject(
                 existing.semanticObject.copy(
-                    baseWord = baseWord,
-                    comment = comment,
-                    imagePath = imagePath,
-                    wordLanguageCode = wordLanguageCode
+                    baseWord = update.baseWord,
+                    comment = update.comment,
+                    imagePath = update.imagePath,
+                    wordLanguageCode = update.wordLanguageCode
                 )
             )
             dao.deleteAllTranslationsForObject(id)
-            translations.filter { it.text.isNotBlank() }.forEach { t ->
+            update.translations.filter { it.text.isNotBlank() }.forEach { t ->
                 dao.insertTranslation(
                     TranslationEntity(
                         objectId = id,

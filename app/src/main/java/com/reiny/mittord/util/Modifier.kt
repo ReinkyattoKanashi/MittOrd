@@ -1,4 +1,4 @@
-package com.reiny.mittord.utils
+package com.reiny.mittord.util
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
@@ -31,9 +31,7 @@ fun Modifier.dpSize(size: () -> DpSize) = layout { measurable, constraints ->
     }
 }
 
-/**
- * Modified version of the code in androidx.compose.foundation.layout.SizeNode
- */
+// Based on androidx.compose.foundation.layout.SizeNode
 private fun Density.targetConstraints(width: Dp, height: Dp, incomingConstraints: Constraints): Constraints {
     val maxWidth = if (width != Dp.Unspecified) {
         width.roundToPx().coerceAtLeast(0)
@@ -69,14 +67,6 @@ private fun Density.targetConstraints(width: Dp, height: Dp, incomingConstraints
         )
     )
 }
-
-//fun Modifier.paddingLayout(all: () -> Dp) =
-//    paddingLayoutInternal(
-//        start = all,
-//        top = all,
-//        end = all,
-//        bottom = all
-//    )
 
 fun Modifier.paddingLayout(
     horizontal: () -> Dp,

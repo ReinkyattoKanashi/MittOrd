@@ -140,7 +140,10 @@ fun MainScreen(
                 .fillMaxSize()
         ) {
             if (words.isEmpty()) {
-                EmptyListPlaceholder(Modifier.align(Alignment.Center))
+                EmptyListPlaceholder(
+                    modifier = Modifier.align(Alignment.Center),
+                    isFiltered = searchQuery.isNotBlank()
+                )
             } else {
                 LazyColumn(
                     state = listState,
@@ -205,6 +208,8 @@ fun MainScreen(
                     onQueryChange = viewModel::onSearchChange,
                     onClear = viewModel::clearSearch
                 ),
+                orderedLanguages = viewModel.orderedLanguages(),
+                addRecentLanguage = viewModel::addRecentLanguage,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 parentHeight = targetHeight
             )
