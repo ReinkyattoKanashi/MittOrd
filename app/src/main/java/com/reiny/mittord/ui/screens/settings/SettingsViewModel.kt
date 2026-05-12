@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.reiny.mittord.database.DictionaryRepository
+import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.util.AppPreferences
 import com.reiny.mittord.util.AvatarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel

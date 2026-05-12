@@ -72,11 +72,11 @@ import com.reiny.mittord.ui.screens.home.components.RoundedPrimaryButton
 import com.reiny.mittord.ui.screens.home.components.SearchState
 import com.reiny.mittord.ui.screens.home.components.TranslateButton
 import com.reiny.mittord.ui.screens.home.components.WordInputField
-import com.reiny.mittord.ui.screens.settings.LANGUAGES
-import com.reiny.mittord.ui.screens.settings.Language
+import com.reiny.mittord.domain.model.Language
+import com.reiny.mittord.domain.model.LANGUAGES
+import com.reiny.mittord.domain.util.LANG_NAME_TO_BCP47
+import com.reiny.mittord.domain.util.langNameForCode
 import com.reiny.mittord.ui.screens.settings.LanguagePickerSheet
-import com.reiny.mittord.ui.screens.wordDetail.LANG_NAME_TO_BCP47
-import com.reiny.mittord.ui.screens.wordDetail.langNameForCode
 import com.reiny.mittord.ui.theme.MittOrdTheme
 import com.reiny.mittord.ui.theme.Theme
 import com.reiny.mittord.ui.theme.typography

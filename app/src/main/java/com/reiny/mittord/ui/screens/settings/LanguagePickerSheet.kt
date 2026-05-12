@@ -34,6 +34,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.reiny.mittord.R
+import com.reiny.mittord.domain.model.Language
+import com.reiny.mittord.domain.model.LANGUAGES
 import com.reiny.mittord.ui.screens.home.components.WordInputField
 import com.reiny.mittord.ui.theme.Theme
 import com.reiny.mittord.ui.theme.typography

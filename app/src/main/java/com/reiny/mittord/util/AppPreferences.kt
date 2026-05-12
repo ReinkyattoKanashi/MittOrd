@@ -2,8 +2,8 @@ package com.reiny.mittord.util
 
 import android.content.Context
 import androidx.core.content.edit
-import com.reiny.mittord.ui.screens.settings.Language
-import com.reiny.mittord.ui.screens.settings.LANGUAGES
+import com.reiny.mittord.domain.model.Language
+import com.reiny.mittord.domain.model.LANGUAGES
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject

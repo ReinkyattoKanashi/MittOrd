@@ -7,8 +7,8 @@ import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
 import com.reiny.mittord.domain.usecase.DetectLanguageUseCase
 import com.reiny.mittord.domain.usecase.GetSupportedLanguagesUseCase
 import com.reiny.mittord.domain.usecase.TranslateTextUseCase
-import com.reiny.mittord.ui.screens.settings.Language
-import com.reiny.mittord.ui.screens.settings.LANGUAGES
+import com.reiny.mittord.domain.model.Language
+import com.reiny.mittord.domain.model.LANGUAGES
 import com.reiny.mittord.util.AppConstants
 import com.reiny.mittord.util.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
