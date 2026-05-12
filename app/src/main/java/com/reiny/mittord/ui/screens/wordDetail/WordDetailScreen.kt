@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -51,7 +52,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.reiny.mittord.R
+import com.reiny.mittord.ui.screens.home.components.LanguageFlagButton
 import com.reiny.mittord.ui.screens.home.components.RoundedPrimaryButton
+import com.reiny.mittord.ui.screens.home.components.TranslateButton
 import com.reiny.mittord.ui.screens.home.components.WordInputField
 import com.reiny.mittord.ui.screens.settings.LanguagePickerSheet
 import com.reiny.mittord.ui.theme.Theme
@@ -66,8 +69,11 @@ fun WordDetailScreen(
     viewModel: WordDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val orderedLanguages by viewModel.orderedLanguages.collectAsState()
+
     var showWordLanguagePicker by remember { mutableStateOf(false) }
     var translationPickerIndex by remember { mutableStateOf<Int?>(null) }
+    var translatePickerIndex by remember { mutableStateOf<Int?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -107,6 +113,7 @@ fun WordDetailScreen(
     val btnSave = stringResource(R.string.btn_save)
     val pickerWordLanguage = stringResource(R.string.picker_word_language)
     val pickerTranslationLanguage = stringResource(R.string.picker_translation_language)
+    val pickerTranslateInto = stringResource(R.string.picker_translate_into)
     val dialogTitle = stringResource(R.string.dialog_unsaved_title)
     val dialogMessage = stringResource(R.string.dialog_unsaved_message)
     val dialogSave = stringResource(R.string.btn_save)
@@ -161,24 +168,40 @@ fun WordDetailScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            WordInputField(
+            // Word field: [FlagButton] [InputField]
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                value = state.word,
-                onValueChange = viewModel::onWordChange,
-                placeholder = placeholderWord,
-                flagEmoji = flagForCode(state.wordLanguageCode) ?: AppConstants.DEFAULT_FLAG_EMOJI,
-                isAutoLanguage = state.wordLanguageIsAuto,
-                onIconClick = { showWordLanguagePicker = true }
-            )
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LanguageFlagButton(
+                    languageCode = state.wordLanguageCode,
+                    isAuto = state.wordLanguageIsAuto,
+                    onClick = { showWordLanguagePicker = true }
+                )
+                Spacer(Modifier.width(8.dp))
+                WordInputField(
+                    modifier = Modifier.weight(1f),
+                    value = state.word,
+                    onValueChange = viewModel::onWordChange,
+                    placeholder = placeholderWord
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
+            // Translation fields: [FlagButton] [InputField] [TranslateButton] [DeleteButton?]
             state.translations.forEachIndexed { i, entry ->
                 if (i > 0) Spacer(Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    LanguageFlagButton(
+                        languageCode = entry.languageCode,
+                        isAuto = entry.isAuto,
+                        onClick = { translationPickerIndex = i }
+                    )
+                    Spacer(Modifier.width(8.dp))
                     WordInputField(
                         modifier = Modifier.weight(1f).let { m ->
                             translationFocusRequesters.getOrNull(i)
@@ -186,10 +209,11 @@ fun WordDetailScreen(
                         },
                         value = entry.text,
                         onValueChange = { viewModel.onTranslationChange(i, it) },
-                        placeholder = placeholderTranslation,
-                        flagEmoji = flagForCode(entry.languageCode) ?: AppConstants.DEFAULT_FLAG_EMOJI,
-                        isAutoLanguage = entry.isAuto,
-                        onIconClick = { translationPickerIndex = i }
+                        placeholder = placeholderTranslation
+                    )
+                    TranslateButton(
+                        onClick = { translatePickerIndex = i },
+                        isLoading = entry.isTranslating
                     )
                     if (state.translations.size > 1) {
                         IconButton(onClick = { viewModel.removeTranslation(i) }) {
@@ -367,22 +391,26 @@ fun WordDetailScreen(
         )
     }
 
+    // Language picker for word field
     if (showWordLanguagePicker) {
         LanguagePickerSheet(
             title = pickerWordLanguage,
             selected = langNameForCode(state.wordLanguageCode) ?: "",
             isAutoSelected = state.wordLanguageIsAuto,
             showAutoOption = true,
-            orderedLanguages = viewModel.orderedLanguages(),
-            onSelect = { name ->
-                name?.let { viewModel.addRecentLanguage(it) }
-                viewModel.onWordLanguageSelected(name?.let { LANG_NAME_TO_BCP47[it] ?: it })
+            orderedLanguages = orderedLanguages,
+            onSelect = { language ->
+                language?.let { viewModel.addRecentLanguage(it.name) }
+                val code = language?.code?.takeIf { it.isNotEmpty() }
+                    ?: language?.let { LANG_NAME_TO_BCP47[it.name] }
+                viewModel.onWordLanguageSelected(code)
                 showWordLanguagePicker = false
             },
             onDismiss = { showWordLanguagePicker = false }
         )
     }
 
+    // Language picker for translation field (detect language)
     translationPickerIndex?.let { idx ->
         val entry = state.translations.getOrNull(idx)
         if (entry != null) {
@@ -391,14 +419,38 @@ fun WordDetailScreen(
                 selected = langNameForCode(entry.languageCode) ?: "",
                 isAutoSelected = entry.isAuto,
                 showAutoOption = true,
-                orderedLanguages = viewModel.orderedLanguages(),
-                onSelect = { name ->
-                    name?.let { viewModel.addRecentLanguage(it) }
-                    viewModel.onTranslationLanguageSelected(idx, name?.let { LANG_NAME_TO_BCP47[it] ?: it })
+                orderedLanguages = orderedLanguages,
+                onSelect = { language ->
+                    language?.let { viewModel.addRecentLanguage(it.name) }
+                    val code = language?.code?.takeIf { it.isNotEmpty() }
+                        ?: language?.let { LANG_NAME_TO_BCP47[it.name] }
+                    viewModel.onTranslationLanguageSelected(idx, code)
                     translationPickerIndex = null
                 },
                 onDismiss = { translationPickerIndex = null }
             )
         }
+    }
+
+    // Translate picker: select target language → auto-translate
+    translatePickerIndex?.let { idx ->
+        LanguagePickerSheet(
+            title = pickerTranslateInto,
+            selected = langNameForCode(state.translations.getOrNull(idx)?.languageCode) ?: "",
+            isAutoSelected = false,
+            showAutoOption = false,
+            orderedLanguages = orderedLanguages,
+            onSelect = { language ->
+                if (language != null) {
+                    viewModel.addRecentLanguage(language.name)
+                    val code = language.code.takeIf { it.isNotEmpty() }
+                        ?: LANG_NAME_TO_BCP47[language.name]
+                        ?: language.name
+                    viewModel.translateTranslation(idx, code)
+                }
+                translatePickerIndex = null
+            },
+            onDismiss = { translatePickerIndex = null }
+        )
     }
 }

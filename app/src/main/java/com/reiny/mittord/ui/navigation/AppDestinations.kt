@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,9 +38,19 @@ object AppDestinations {
 fun AppNavHost(
     navController: NavHostController,
     isDarkTheme: Boolean,
-    onDarkThemeChange: (Boolean) -> Unit
+    onDarkThemeChange: (Boolean) -> Unit,
+    processTextWord: String? = null,
+    onProcessTextConsumed: () -> Unit = {}
 ) {
     var splashVisible by remember { mutableStateOf(true) }
+
+    LaunchedEffect(processTextWord) {
+        if (processTextWord != null) {
+            navController.navigate(AppDestinations.MAIN) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -65,7 +76,9 @@ fun AppNavHost(
             composable(AppDestinations.MAIN) {
                 MainScreen(
                     onSettingsClick = { navController.navigate(AppDestinations.SETTINGS) },
-                    onWordClick = { wordId -> navController.navigate(AppDestinations.wordDetail(wordId)) }
+                    onWordClick = { wordId -> navController.navigate(AppDestinations.wordDetail(wordId)) },
+                    processTextWord = processTextWord,
+                    onProcessTextConsumed = onProcessTextConsumed
                 )
             }
             composable(AppDestinations.SETTINGS) {

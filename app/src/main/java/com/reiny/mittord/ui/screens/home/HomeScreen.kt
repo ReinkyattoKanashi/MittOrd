@@ -12,9 +12,10 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -66,6 +67,8 @@ import com.reiny.mittord.util.AppConstants
 fun MainScreen(
     onSettingsClick: () -> Unit,
     onWordClick: (Long) -> Unit,
+    processTextWord: String? = null,
+    onProcessTextConsumed: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val words by viewModel.filteredWords.collectAsState()
@@ -76,12 +79,22 @@ fun MainScreen(
     val wordLanguageIsAuto by viewModel.wordLanguageIsAuto.collectAsState()
     val translationLanguageCode by viewModel.translationLanguageCode.collectAsState()
     val translationLanguageIsAuto by viewModel.translationLanguageIsAuto.collectAsState()
+    val isTranslatingTranslation by viewModel.isTranslatingTranslation.collectAsState()
+    val orderedLanguages by viewModel.orderedLanguages.collectAsState()
     var state by remember { mutableStateOf(BottomNavState.Default) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
         viewModel.scrollToTop.collect {
             listState.animateScrollToItem(0)
+        }
+    }
+
+    LaunchedEffect(processTextWord) {
+        if (processTextWord != null) {
+            viewModel.setExternalWord(processTextWord)
+            state = BottomNavState.AddWord
+            onProcessTextConsumed()
         }
     }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -136,7 +149,8 @@ fun MainScreen(
         Box(
             modifier = Modifier
                 .padding(innerPadding)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
+                .then(if (state == BottomNavState.Search) Modifier.imePadding() else Modifier)
                 .fillMaxSize()
         ) {
             if (words.isEmpty()) {
@@ -193,10 +207,12 @@ fun MainScreen(
                     translationLanguageCode = translationLanguageCode,
                     wordLanguageIsAuto = wordLanguageIsAuto,
                     translationLanguageIsAuto = translationLanguageIsAuto,
+                    isTranslating = isTranslatingTranslation,
                     onWordChange = viewModel::onWordChange,
                     onTranslationChange = viewModel::onTranslationChange,
                     onWordLanguageSelected = viewModel::onWordLanguageSelected,
                     onTranslationLanguageSelected = viewModel::onTranslationLanguageSelected,
+                    onTranslateTranslation = viewModel::translateTranslation,
                     onAddWord = {
                         viewModel.addWord()
                         keyboardController?.hide()
@@ -208,7 +224,7 @@ fun MainScreen(
                     onQueryChange = viewModel::onSearchChange,
                     onClear = viewModel::clearSearch
                 ),
-                orderedLanguages = viewModel.orderedLanguages(),
+                orderedLanguages = orderedLanguages,
                 addRecentLanguage = viewModel::addRecentLanguage,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 parentHeight = targetHeight

@@ -4,7 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.reiny.mittord.database.DictionaryRepository
 import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
-import com.reiny.mittord.ui.screens.wordDetail.detectLanguage
+import com.reiny.mittord.domain.usecase.DetectLanguageUseCase
+import com.reiny.mittord.domain.usecase.GetSupportedLanguagesUseCase
+import com.reiny.mittord.domain.usecase.TranslateTextUseCase
+import com.reiny.mittord.ui.screens.settings.Language
+import com.reiny.mittord.ui.screens.settings.LANGUAGES
 import com.reiny.mittord.util.AppConstants
 import com.reiny.mittord.util.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -24,7 +29,10 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: DictionaryRepository,
-    private val appPrefs: AppPreferences
+    private val appPrefs: AppPreferences,
+    private val detectLanguageUseCase: DetectLanguageUseCase,
+    private val translateTextUseCase: TranslateTextUseCase,
+    private val getSupportedLanguagesUseCase: GetSupportedLanguagesUseCase
 ) : ViewModel() {
 
     private val _words = MutableStateFlow<List<SemanticObjectWithTranslations>>(emptyList())
@@ -59,14 +67,26 @@ class HomeViewModel @Inject constructor(
     private val _translationLanguageIsAuto = MutableStateFlow(true)
     val translationLanguageIsAuto: StateFlow<Boolean> = _translationLanguageIsAuto.asStateFlow()
 
+    private val _isTranslatingTranslation = MutableStateFlow(false)
+    val isTranslatingTranslation: StateFlow<Boolean> = _isTranslatingTranslation.asStateFlow()
+
     private val _scrollToTop = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val scrollToTop = _scrollToTop.asSharedFlow()
+
+    private val _allLanguages = MutableStateFlow<List<Language>>(LANGUAGES)
+    val orderedLanguages: StateFlow<List<Language>> = _allLanguages
+        .map { appPrefs.orderedLanguages(it) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, appPrefs.orderedLanguages())
 
     private var detectWordJob: Job? = null
     private var detectTranslationJob: Job? = null
 
     init {
         load()
+        viewModelScope.launch {
+            val languages = getSupportedLanguagesUseCase()
+            if (languages.isNotEmpty()) _allLanguages.value = languages
+        }
     }
 
     fun onWordChange(value: String) {
@@ -77,7 +97,7 @@ class HomeViewModel @Inject constructor(
         if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
             detectWordJob = viewModelScope.launch {
                 delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
-                _wordLanguageCode.value = detectLanguage(trimmed)
+                _wordLanguageCode.value = detectLanguageUseCase(trimmed)
             }
         } else {
             _wordLanguageCode.value = null
@@ -92,7 +112,7 @@ class HomeViewModel @Inject constructor(
         if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
             detectTranslationJob = viewModelScope.launch {
                 delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
-                _translationLanguageCode.value = detectLanguage(trimmed)
+                _translationLanguageCode.value = detectLanguageUseCase(trimmed)
             }
         } else {
             _translationLanguageCode.value = null
@@ -106,7 +126,7 @@ class HomeViewModel @Inject constructor(
             val trimmed = _wordInput.value.trim()
             if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
                 detectWordJob = viewModelScope.launch {
-                    _wordLanguageCode.value = detectLanguage(trimmed)
+                    _wordLanguageCode.value = detectLanguageUseCase(trimmed)
                 }
             } else {
                 _wordLanguageCode.value = null
@@ -124,7 +144,7 @@ class HomeViewModel @Inject constructor(
             val trimmed = _translationInput.value.trim()
             if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
                 detectTranslationJob = viewModelScope.launch {
-                    _translationLanguageCode.value = detectLanguage(trimmed)
+                    _translationLanguageCode.value = detectLanguageUseCase(trimmed)
                 }
             } else {
                 _translationLanguageCode.value = null
@@ -135,8 +155,32 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun translateTranslation(targetCode: String) {
+        val sourceText = _wordInput.value.trim()
+        if (sourceText.isBlank()) return
+        _isTranslatingTranslation.value = true
+        _translationLanguageIsAuto.value = false
+        _translationLanguageCode.value = targetCode
+        viewModelScope.launch {
+            val result = translateTextUseCase(sourceText, targetCode)
+            if (result != null) _translationInput.value = result
+            _isTranslatingTranslation.value = false
+        }
+    }
+
+    fun setExternalWord(word: String) {
+        _wordInput.value = word
+        _wordLanguageIsAuto.value = true
+        _wordLanguageCode.value = null
+        detectWordJob?.cancel()
+        if (word.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
+            detectWordJob = viewModelScope.launch {
+                _wordLanguageCode.value = detectLanguageUseCase(word)
+            }
+        }
+    }
+
     fun addRecentLanguage(name: String) = appPrefs.addRecentLanguage(name)
-    fun orderedLanguages() = appPrefs.orderedLanguages()
 
     fun onSearchChange(value: String) { _searchQuery.value = value }
 
@@ -153,7 +197,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val id = repository.addWord(word, translation, knownTransCode)
             resetInputs()
-            val code = knownWordCode ?: detectLanguage(word)
+            val code = knownWordCode ?: detectLanguageUseCase(word)
             if (code != null) repository.updateLanguageCode(id, code)
             _words.value = repository.listWithTranslations()
             _scrollToTop.tryEmit(Unit)
@@ -173,6 +217,7 @@ class HomeViewModel @Inject constructor(
         _translationLanguageCode.value = null
         _wordLanguageIsAuto.value = true
         _translationLanguageIsAuto.value = true
+        _isTranslatingTranslation.value = false
         detectWordJob?.cancel()
         detectTranslationJob?.cancel()
     }
@@ -186,11 +231,14 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun seedMockData() {
         listOf(
-            "hund" to "собака", "katt" to "кошка", "hus" to "дом", "bil" to "машина",
-            "bok" to "книга", "vann" to "вода", "mat" to "еда", "dag" to "день",
-            "natt" to "ночь", "sol" to "солнце", "måne" to "луна", "tre" to "дерево",
-            "blomst" to "цветок", "fugl" to "птица", "fisk" to "рыба", "himmel" to "небо",
-            "fjell" to "гора", "hav" to "море", "elv" to "река", "vind" to "ветер"
-        ).forEach { (word, translation) -> repository.addWord(word, translation) }
+            "hund" to "dog", "katt" to "cat", "hus" to "house", "bil" to "car",
+            "bok" to "book", "vann" to "water", "mat" to "food", "dag" to "day",
+            "natt" to "night", "sol" to "sun", "måne" to "moon", "tre" to "tree",
+            "blomst" to "flower", "fugl" to "bird", "fisk" to "fish", "himmel" to "sky",
+            "fjell" to "mountain", "hav" to "sea", "elv" to "river", "vind" to "wind"
+        ).forEach { (word, translation) ->
+            val id = repository.addWord(word, translation, "en")
+            repository.updateLanguageCode(id, "no")
+        }
     }
 }

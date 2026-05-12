@@ -31,13 +31,21 @@ class AppPreferences @Inject constructor(@ApplicationContext context: Context) {
             ?: AppConstants.DEFAULT_NATIVE_LANG
         set(value) = prefs.edit { putString(AppConstants.PREF_NATIVE_LANG, value) }
 
+    var darkThemeOverride: Boolean?
+        get() = if (prefs.contains(AppConstants.PREF_DARK_THEME))
+            prefs.getBoolean(AppConstants.PREF_DARK_THEME, false) else null
+        set(value) = prefs.edit {
+            if (value != null) putBoolean(AppConstants.PREF_DARK_THEME, value)
+            else remove(AppConstants.PREF_DARK_THEME)
+        }
+
     fun addRecentLanguage(name: String) {
         val current = recentLanguageNames().filter { it != name }
         val updated = (listOf(name) + current).take(5)
         prefs.edit { putString(AppConstants.PREF_RECENT_LANGS, updated.joinToString(",")) }
     }
 
-    fun orderedLanguages(): List<Language> {
+    fun orderedLanguages(allLanguages: List<Language> = LANGUAGES): List<Language> {
         val learning = learningLanguage
         val native = nativeLanguage
         val recent = recentLanguageNames()
@@ -45,8 +53,8 @@ class AppPreferences @Inject constructor(@ApplicationContext context: Context) {
         val prioritySet = priority.toSet()
         val recentFiltered = recent.filter { it !in prioritySet }.take(5)
         val pinnedNames = (priority + recentFiltered).toSet()
-        return (priority + recentFiltered).mapNotNull { name -> LANGUAGES.find { it.name == name } } +
-            LANGUAGES.filter { it.name !in pinnedNames }
+        return (priority + recentFiltered).mapNotNull { name -> allLanguages.find { it.name == name } } +
+            allLanguages.filter { it.name !in pinnedNames }
     }
 
     private fun recentLanguageNames(): List<String> =

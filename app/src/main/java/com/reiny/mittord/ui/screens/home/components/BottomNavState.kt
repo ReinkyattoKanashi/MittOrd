@@ -11,10 +11,12 @@ data class AddWordState(
     val translationLanguageCode: String?,
     val wordLanguageIsAuto: Boolean,
     val translationLanguageIsAuto: Boolean,
+    val isTranslating: Boolean = false,
     val onWordChange: (String) -> Unit,
     val onTranslationChange: (String) -> Unit,
     val onWordLanguageSelected: (String?) -> Unit,
     val onTranslationLanguageSelected: (String?) -> Unit,
+    val onTranslateTranslation: (String) -> Unit,
     val onAddWord: () -> Unit
 )
 

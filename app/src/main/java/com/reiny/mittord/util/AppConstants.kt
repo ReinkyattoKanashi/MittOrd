@@ -8,6 +8,7 @@ object AppConstants {
     const val PREF_LEARNING_LANG = "learning_lang"
     const val PREF_NATIVE_LANG = "native_lang"
     const val PREF_RECENT_LANGS = "recent_langs"
+    const val PREF_DARK_THEME = "dark_theme"
 
     // Default language values
     const val DEFAULT_LEARNING_LANG = "Norwegian"
@@ -36,6 +37,7 @@ object AppConstants {
     const val LANG_CODE_UNDETERMINED = "und"
 
     // Network
+    const val TRANSLATE_BASE_URL = "https://translate.googleapis.com/"
     const val TRANSLATE_API_URL =
         "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q="
     const val TRANSLATE_USER_AGENT = "Mozilla/5.0"

@@ -2,7 +2,7 @@
 applicationId = "com.reiny.mittord"
 coreSplashscreen = "1.2.0"
 versionName = "1.0.1"
-versionCode = "7"
+versionCode = "9"
 appName = "MittOrd"
 accompanistNavigationAnimation = "0.36.0"
 agp = "8.13.0"
@@ -22,6 +22,8 @@ room = "2.8.4"
 ksp = "2.0.21-1.0.27"
 coreKtxVersion = "1.7.0"
 coil = "2.7.0"
+retrofit = "2.11.0"
+okhttp = "4.12.0"
 [libraries]
 accompanist-navigation-animation = { module = "com.google.accompanist:accompanist-navigation-animation", version.ref = "accompanistNavigationAnimation" }
 androidx-compose-animation = { module = "androidx.compose.animation:animation", version.ref = "animation" }
@@ -51,6 +53,9 @@ core-ktx = { group = "androidx.test", name = "core-ktx", version.ref = "coreKtxV
 compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+retrofit-converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 
 
 [plugins]

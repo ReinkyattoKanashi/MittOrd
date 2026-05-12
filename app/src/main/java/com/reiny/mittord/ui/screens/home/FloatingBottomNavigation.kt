@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,12 +47,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
@@ -65,24 +66,24 @@ import com.reiny.mittord.R
 import com.reiny.mittord.ui.animations.NavBarAnimation
 import com.reiny.mittord.ui.screens.home.components.AddWordState
 import com.reiny.mittord.ui.screens.home.components.BottomNavState
-import com.reiny.mittord.ui.screens.home.components.SearchState
+import com.reiny.mittord.ui.screens.home.components.LanguageFlagButton
 import com.reiny.mittord.ui.screens.home.components.PrimaryTextField
 import com.reiny.mittord.ui.screens.home.components.RoundedPrimaryButton
+import com.reiny.mittord.ui.screens.home.components.SearchState
+import com.reiny.mittord.ui.screens.home.components.TranslateButton
 import com.reiny.mittord.ui.screens.home.components.WordInputField
+import com.reiny.mittord.ui.screens.settings.LANGUAGES
 import com.reiny.mittord.ui.screens.settings.Language
 import com.reiny.mittord.ui.screens.settings.LanguagePickerSheet
-import com.reiny.mittord.ui.screens.settings.LANGUAGES
 import com.reiny.mittord.ui.screens.wordDetail.LANG_NAME_TO_BCP47
-import com.reiny.mittord.ui.screens.wordDetail.flagForCode
 import com.reiny.mittord.ui.screens.wordDetail.langNameForCode
 import com.reiny.mittord.ui.theme.MittOrdTheme
 import com.reiny.mittord.ui.theme.Theme
-import com.reiny.mittord.ui.theme.colors
 import com.reiny.mittord.ui.theme.typography
-import com.reiny.mittord.util.AppConstants
 import com.reiny.mittord.util.height
 import com.reiny.mittord.util.paddingLayout
 import com.reiny.mittord.util.size
+import kotlinx.coroutines.delay
 
 @Composable
 fun FloatingBottomNavigationDefault(
@@ -245,7 +246,7 @@ private fun BoxScope.BackgroundSurface(
     }
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddWordContent(
     isExpanded: Boolean,
@@ -254,8 +255,9 @@ private fun AddWordContent(
     addRecentLanguage: (String) -> Unit
 ) {
     val wordFocusRequester = remember { FocusRequester() }
-    var showLanguagePicker by remember { mutableStateOf(false) }
-    var showTranslationPicker by remember { mutableStateOf(false) }
+    var showWordLanguagePicker by remember { mutableStateOf(false) }
+    var showTranslationLanguagePicker by remember { mutableStateOf(false) }
+    var showTranslatePicker by remember { mutableStateOf(false) }
 
     val titleAddWord = stringResource(R.string.nav_add_word_title)
     val placeholderWord = stringResource(R.string.placeholder_word)
@@ -263,6 +265,7 @@ private fun AddWordContent(
     val btnAdd = stringResource(R.string.btn_add)
     val pickerWordLanguage = stringResource(R.string.picker_word_language)
     val pickerTranslationLanguage = stringResource(R.string.picker_translation_language)
+    val pickerTranslateInto = stringResource(R.string.picker_translate_into)
 
     LaunchedEffect(isExpanded) {
         if (isExpanded) {
@@ -272,7 +275,7 @@ private fun AddWordContent(
     }
 
     Column(
-        modifier = Modifier.fillMaxHeight(),
+        modifier = Modifier.fillMaxHeight().imePadding(),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -289,38 +292,60 @@ private fun AddWordContent(
             )
         }
 
+        // Word field: [FlagButton] [InputField]
         AnimatedVisibility(
             visible = isExpanded,
             enter = fadeIn(tween(280, 260)) + slideInVertically(tween(280, 260)) { it / 2 },
             exit = fadeOut(tween(80))
         ) {
-            WordInputField(
-                modifier = Modifier
-                    .padding(start = 24.dp, end = 24.dp)
-                    .focusRequester(wordFocusRequester),
-                value = addWord.wordInput,
-                onValueChange = addWord.onWordChange,
-                placeholder = placeholderWord,
-                flagEmoji = flagForCode(addWord.wordLanguageCode) ?: AppConstants.DEFAULT_FLAG_EMOJI,
-                isAutoLanguage = addWord.wordLanguageIsAuto,
-                onIconClick = { showLanguagePicker = true }
-            )
+            Row(
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LanguageFlagButton(
+                    languageCode = addWord.wordLanguageCode,
+                    isAuto = addWord.wordLanguageIsAuto,
+                    onClick = { showWordLanguagePicker = true }
+                )
+                Spacer(Modifier.width(8.dp))
+                WordInputField(
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(wordFocusRequester),
+                    value = addWord.wordInput,
+                    onValueChange = addWord.onWordChange,
+                    placeholder = placeholderWord
+                )
+            }
         }
 
+        // Translation field: [FlagButton] [InputField] [TranslateButton]
         AnimatedVisibility(
             visible = isExpanded,
             enter = fadeIn(tween(280, 370)) + slideInVertically(tween(280, 370)) { it / 2 },
             exit = fadeOut(tween(80))
         ) {
-            WordInputField(
+            Row(
                 modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp),
-                value = addWord.translationInput,
-                onValueChange = addWord.onTranslationChange,
-                placeholder = placeholderTranslation,
-                flagEmoji = flagForCode(addWord.translationLanguageCode) ?: AppConstants.DEFAULT_FLAG_EMOJI,
-                isAutoLanguage = addWord.translationLanguageIsAuto,
-                onIconClick = { showTranslationPicker = true }
-            )
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LanguageFlagButton(
+                    languageCode = addWord.translationLanguageCode,
+                    isAuto = addWord.translationLanguageIsAuto,
+                    onClick = { showTranslationLanguagePicker = true }
+                )
+                Spacer(Modifier.width(8.dp))
+                WordInputField(
+                    modifier = Modifier.weight(1f),
+                    value = addWord.translationInput,
+                    onValueChange = addWord.onTranslationChange,
+                    placeholder = placeholderTranslation
+                )
+                TranslateButton(
+                    onClick = { showTranslatePicker = true },
+                    isLoading = addWord.isTranslating
+                )
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -339,35 +364,63 @@ private fun AddWordContent(
         }
     }
 
-    if (showLanguagePicker) {
+    // Word language picker
+    if (showWordLanguagePicker) {
         LanguagePickerSheet(
             title = pickerWordLanguage,
             selected = langNameForCode(addWord.wordLanguageCode) ?: "",
             isAutoSelected = addWord.wordLanguageIsAuto,
             showAutoOption = true,
             orderedLanguages = orderedLanguages,
-            onSelect = { name ->
-                name?.let { addRecentLanguage(it) }
-                addWord.onWordLanguageSelected(name?.let { LANG_NAME_TO_BCP47[it] ?: it })
-                showLanguagePicker = false
+            onSelect = { language ->
+                language?.let { addRecentLanguage(it.name) }
+                val code = language?.code?.takeIf { it.isNotEmpty() }
+                    ?: language?.let { LANG_NAME_TO_BCP47[it.name] }
+                addWord.onWordLanguageSelected(code)
+                showWordLanguagePicker = false
             },
-            onDismiss = { showLanguagePicker = false }
+            onDismiss = { showWordLanguagePicker = false }
         )
     }
 
-    if (showTranslationPicker) {
+    // Translation language picker (detect)
+    if (showTranslationLanguagePicker) {
         LanguagePickerSheet(
             title = pickerTranslationLanguage,
             selected = langNameForCode(addWord.translationLanguageCode) ?: "",
             isAutoSelected = addWord.translationLanguageIsAuto,
             showAutoOption = true,
             orderedLanguages = orderedLanguages,
-            onSelect = { name ->
-                name?.let { addRecentLanguage(it) }
-                addWord.onTranslationLanguageSelected(name?.let { LANG_NAME_TO_BCP47[it] ?: it })
-                showTranslationPicker = false
+            onSelect = { language ->
+                language?.let { addRecentLanguage(it.name) }
+                val code = language?.code?.takeIf { it.isNotEmpty() }
+                    ?: language?.let { LANG_NAME_TO_BCP47[it.name] }
+                addWord.onTranslationLanguageSelected(code)
+                showTranslationLanguagePicker = false
             },
-            onDismiss = { showTranslationPicker = false }
+            onDismiss = { showTranslationLanguagePicker = false }
+        )
+    }
+
+    // Translate picker: select language → auto-translate word
+    if (showTranslatePicker) {
+        LanguagePickerSheet(
+            title = pickerTranslateInto,
+            selected = langNameForCode(addWord.translationLanguageCode) ?: "",
+            isAutoSelected = false,
+            showAutoOption = false,
+            orderedLanguages = orderedLanguages,
+            onSelect = { language ->
+                if (language != null) {
+                    addRecentLanguage(language.name)
+                    val code = language.code.takeIf { it.isNotEmpty() }
+                        ?: LANG_NAME_TO_BCP47[language.name]
+                        ?: language.name
+                    addWord.onTranslateTranslation(code)
+                }
+                showTranslatePicker = false
+            },
+            onDismiss = { showTranslatePicker = false }
         )
     }
 }
@@ -570,8 +623,10 @@ private fun previewAddWord(
     translationLanguageCode = null,
     wordLanguageIsAuto = true,
     translationLanguageIsAuto = true,
+    isTranslating = false,
     onWordChange = {}, onTranslationChange = {},
     onWordLanguageSelected = {}, onTranslationLanguageSelected = {},
+    onTranslateTranslation = {},
     onAddWord = {}
 )
 

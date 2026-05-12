@@ -4,12 +4,15 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.reiny.mittord.database.DictionaryRepository
 import com.reiny.mittord.util.AppPreferences
 import com.reiny.mittord.util.AvatarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -17,8 +20,12 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val appPrefs: AppPreferences,
-    private val avatarRepo: AvatarRepository
+    private val avatarRepo: AvatarRepository,
+    private val dictionaryRepository: DictionaryRepository
 ) : ViewModel() {
+
+    private val _seedDoneEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val seedDoneEvent = _seedDoneEvent.asSharedFlow()
 
     private val _avatarPath = MutableStateFlow<String?>(appPrefs.avatarPath)
     val avatarPath: StateFlow<String?> = _avatarPath.asStateFlow()
@@ -74,4 +81,20 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun orderedLanguages() = appPrefs.orderedLanguages()
+
+    fun seedMockData() {
+        viewModelScope.launch {
+            listOf(
+                "hund" to "dog", "katt" to "cat", "hus" to "house", "bil" to "car",
+                "bok" to "book", "vann" to "water", "mat" to "food", "dag" to "day",
+                "natt" to "night", "sol" to "sun", "måne" to "moon", "tre" to "tree",
+                "blomst" to "flower", "fugl" to "bird", "fisk" to "fish", "himmel" to "sky",
+                "fjell" to "mountain", "hav" to "sea", "elv" to "river", "vind" to "wind"
+            ).forEach { (word, translation) ->
+                val id = dictionaryRepository.addWord(word, translation, "en")
+                dictionaryRepository.updateLanguageCode(id, "no")
+            }
+            _seedDoneEvent.emit(Unit)
+        }
+    }
 }

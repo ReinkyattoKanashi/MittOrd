@@ -28,6 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.reiny.mittord.R
@@ -43,7 +46,7 @@ internal fun LanguagePickerSheet(
     isAutoSelected: Boolean = false,
     showAutoOption: Boolean = false,
     orderedLanguages: List<Language> = LANGUAGES,
-    onSelect: (String?) -> Unit,
+    onSelect: (Language?) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -56,7 +59,8 @@ internal fun LanguagePickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentWindowInsets = { WindowInsets.navigationBars }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
@@ -89,7 +93,7 @@ internal fun LanguagePickerSheet(
                     LanguageItem(
                         language = language,
                         selected = !isAutoSelected && language.name == selected,
-                        onClick = { onSelect(language.name) }
+                        onClick = { onSelect(language) }
                     )
                 }
                 item { Spacer(Modifier.size(16.dp)) }
@@ -99,7 +103,7 @@ internal fun LanguagePickerSheet(
 }
 
 @Composable
-private fun AutoDetectItem(isAutoSelected: Boolean, onSelect: (String?) -> Unit) {
+private fun AutoDetectItem(isAutoSelected: Boolean, onSelect: (Language?) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -107,7 +111,12 @@ private fun AutoDetectItem(isAutoSelected: Boolean, onSelect: (String?) -> Unit)
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = "⟳", style = Theme.typography.h2)
+        Icon(
+            painter = painterResource(R.drawable.ic_sparkles),
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
         Spacer(Modifier.width(14.dp))
         Text(
             text = stringResource(R.string.auto_detect),

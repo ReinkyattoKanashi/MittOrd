@@ -7,6 +7,11 @@ import androidx.lifecycle.viewModelScope
 import com.reiny.mittord.database.DictionaryRepository
 import com.reiny.mittord.database.TranslationData
 import com.reiny.mittord.database.WordUpdate
+import com.reiny.mittord.domain.usecase.DetectLanguageUseCase
+import com.reiny.mittord.domain.usecase.GetSupportedLanguagesUseCase
+import com.reiny.mittord.domain.usecase.TranslateTextUseCase
+import com.reiny.mittord.ui.screens.settings.Language
+import com.reiny.mittord.ui.screens.settings.LANGUAGES
 import com.reiny.mittord.util.AppConstants
 import com.reiny.mittord.util.AppPreferences
 import com.reiny.mittord.util.WordImageRepository
@@ -16,8 +21,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -27,7 +35,8 @@ data class TranslationEntry(
     val id: Long = 0L,
     val text: String = "",
     val languageCode: String? = null,
-    val isAuto: Boolean = true
+    val isAuto: Boolean = true,
+    val isTranslating: Boolean = false
 )
 
 data class WordDetailState(
@@ -46,6 +55,9 @@ class WordDetailViewModel @Inject constructor(
     private val repository: DictionaryRepository,
     private val appPrefs: AppPreferences,
     private val wordImageRepo: WordImageRepository,
+    private val detectLanguageUseCase: DetectLanguageUseCase,
+    private val translateTextUseCase: TranslateTextUseCase,
+    private val getSupportedLanguagesUseCase: GetSupportedLanguagesUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -56,6 +68,11 @@ class WordDetailViewModel @Inject constructor(
 
     private val _focusTranslation = MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val focusTranslation = _focusTranslation.asSharedFlow()
+
+    private val _allLanguages = MutableStateFlow<List<Language>>(LANGUAGES)
+    val orderedLanguages: StateFlow<List<Language>> = _allLanguages
+        .map { appPrefs.orderedLanguages(it) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, appPrefs.orderedLanguages())
 
     private var detectWordJob: Job? = null
     private val detectTranslationJobs = mutableMapOf<Int, Job>()
@@ -86,6 +103,10 @@ class WordDetailViewModel @Inject constructor(
 
     init {
         load()
+        viewModelScope.launch {
+            val languages = getSupportedLanguagesUseCase()
+            if (languages.isNotEmpty()) _allLanguages.value = languages
+        }
     }
 
     fun onWordChange(value: String) {
@@ -96,7 +117,7 @@ class WordDetailViewModel @Inject constructor(
         if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
             detectWordJob = viewModelScope.launch {
                 delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
-                val code = detectLanguage(trimmed)
+                val code = detectLanguageUseCase(trimmed)
                 if (code != null) _state.value = _state.value.copy(wordLanguageCode = code)
             }
         }
@@ -109,7 +130,7 @@ class WordDetailViewModel @Inject constructor(
             val trimmed = _state.value.word.trim()
             if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
                 detectWordJob = viewModelScope.launch {
-                    val detected = detectLanguage(trimmed)
+                    val detected = detectLanguageUseCase(trimmed)
                     if (detected != null) _state.value = _state.value.copy(wordLanguageCode = detected)
                 }
             }
@@ -130,7 +151,7 @@ class WordDetailViewModel @Inject constructor(
         if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
             detectTranslationJobs[index] = viewModelScope.launch {
                 delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
-                val code = detectLanguage(trimmed)
+                val code = detectLanguageUseCase(trimmed)
                 if (code != null) {
                     val current = _state.value.translations.toMutableList()
                     if (index in current.indices) {
@@ -154,7 +175,7 @@ class WordDetailViewModel @Inject constructor(
             val trimmed = translations[index].text.trim()
             if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
                 detectTranslationJobs[index] = viewModelScope.launch {
-                    val detected = detectLanguage(trimmed)
+                    val detected = detectLanguageUseCase(trimmed)
                     if (detected != null) {
                         val current = _state.value.translations.toMutableList()
                         if (index in current.indices) {
@@ -171,8 +192,29 @@ class WordDetailViewModel @Inject constructor(
         }
     }
 
+    fun translateTranslation(index: Int, targetCode: String) {
+        val sourceText = _state.value.word.trim()
+        if (sourceText.isBlank()) return
+        val translations = _state.value.translations.toMutableList()
+        if (index !in translations.indices) return
+        translations[index] = translations[index].copy(isTranslating = true)
+        _state.value = _state.value.copy(translations = translations)
+        viewModelScope.launch {
+            val result = translateTextUseCase(sourceText, targetCode)
+            val current = _state.value.translations.toMutableList()
+            if (index in current.indices) {
+                current[index] = current[index].copy(
+                    text = result ?: current[index].text,
+                    languageCode = targetCode,
+                    isAuto = false,
+                    isTranslating = false
+                )
+                _state.value = _state.value.copy(translations = current)
+            }
+        }
+    }
+
     fun addRecentLanguage(name: String) = appPrefs.addRecentLanguage(name)
-    fun orderedLanguages() = appPrefs.orderedLanguages()
 
     fun addTranslation() {
         val translations = _state.value.translations.toMutableList()

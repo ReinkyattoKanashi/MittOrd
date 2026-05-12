@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import android.widget.Toast
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -37,6 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,6 +87,12 @@ fun SettingsScreen(
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        viewModel.seedDoneEvent.collect {
+            Toast.makeText(context, context.getString(R.string.mock_data_added), Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { selectedUri ->
@@ -193,6 +201,16 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(20.dp))
 
+                SettingsGroup(stringResource(R.string.settings_developer)) {
+                    SettingsNavRow(
+                        label = stringResource(R.string.settings_add_mock_data),
+                        value = "",
+                        onClick = viewModel::seedMockData
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+
                 SettingsGroup(stringResource(R.string.settings_about)) {
                     SettingsInfoRow(
                         icon = Icons.Default.Info,
@@ -234,7 +252,7 @@ fun SettingsScreen(
             title = learningPickerTitle,
             selected = learningLanguage,
             orderedLanguages = viewModel.orderedLanguages(),
-            onSelect = { it?.let { name -> viewModel.setLearningLanguage(name) }; showLearningPicker = false },
+            onSelect = { it?.let { lang -> viewModel.setLearningLanguage(lang.name) }; showLearningPicker = false },
             onDismiss = { showLearningPicker = false }
         )
     }
@@ -244,7 +262,7 @@ fun SettingsScreen(
             title = nativePickerTitle,
             selected = nativeLanguage,
             orderedLanguages = viewModel.orderedLanguages(),
-            onSelect = { it?.let { name -> viewModel.setNativeLanguage(name) }; showNativePicker = false },
+            onSelect = { it?.let { lang -> viewModel.setNativeLanguage(lang.name) }; showNativePicker = false },
             onDismiss = { showNativePicker = false }
         )
     }
