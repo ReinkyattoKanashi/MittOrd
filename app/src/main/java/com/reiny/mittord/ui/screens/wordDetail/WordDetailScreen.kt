@@ -20,7 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -30,6 +30,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,7 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.reiny.mittord.R
 import com.reiny.mittord.ui.screens.home.components.LanguageFlagButton
@@ -72,6 +74,7 @@ fun WordDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val orderedLanguages by viewModel.orderedLanguages.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var showWordLanguagePicker by remember { mutableStateOf(false) }
     var translationPickerIndex by remember { mutableStateOf<Int?>(null) }
@@ -94,6 +97,17 @@ fun WordDetailScreen(
         viewModel.focusTranslation.collect { index ->
             kotlinx.coroutines.delay(AppConstants.FOCUS_REQUEST_DELAY_MS)
             try { translationFocusRequesters.getOrNull(index)?.requestFocus() } catch (_: Exception) {}
+        }
+    }
+
+    val errorTranslationFailed = stringResource(R.string.error_translation_failed)
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                WordDetailEvent.Saved, WordDetailEvent.Deleted -> onBack()
+                WordDetailEvent.TranslationFailed ->
+                    snackbarHostState.showSnackbar(errorTranslationFailed)
+            }
         }
     }
 
@@ -130,7 +144,7 @@ fun WordDetailScreen(
                 title = {},
                 navigationIcon = {
                     IconButton(onClick = handleBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = cdBack)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = cdBack)
                     }
                 },
                 actions = {
@@ -147,6 +161,7 @@ fun WordDetailScreen(
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0)
     ) { innerPadding ->
@@ -325,7 +340,7 @@ fun WordDetailScreen(
 
             RoundedPrimaryButton(
                 text = btnSave,
-                onClick = { viewModel.save(onBack) },
+                onClick = { viewModel.save() },
                 enabled = state.word.isNotBlank()
             )
         }
@@ -349,7 +364,7 @@ fun WordDetailScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.delete(onBack) }) {
+                TextButton(onClick = { viewModel.delete() }) {
                     Text(cdDelete, color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -380,7 +395,7 @@ fun WordDetailScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.save(onBack) }) {
+                TextButton(onClick = { viewModel.save() }) {
                     Text(dialogSave, color = MaterialTheme.colorScheme.primary)
                 }
             },

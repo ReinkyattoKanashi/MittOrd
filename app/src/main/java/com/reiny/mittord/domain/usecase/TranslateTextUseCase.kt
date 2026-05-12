@@ -6,6 +6,6 @@ import javax.inject.Inject
 class TranslateTextUseCase @Inject constructor(
     private val repository: TranslateRepository
 ) {
-    suspend operator fun invoke(text: String, targetLanguageCode: String): String? =
-        repository.translateText(text, targetLanguageCode)
+    suspend operator fun invoke(text: String, targetLanguageCode: String): Result<String> =
+        runCatching { repository.translateText(text, targetLanguageCode) }
 }

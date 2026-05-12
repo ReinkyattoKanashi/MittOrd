@@ -8,6 +8,7 @@ import androidx.room.Update
 import com.reiny.mittord.database.entity.SemanticObjectEntity
 import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
 import com.reiny.mittord.database.entity.TranslationEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SemanticObjectDao {
@@ -41,6 +42,10 @@ interface SemanticObjectDao {
 
     @Query("SELECT * FROM semantic_object ORDER BY createdAt DESC")
     suspend fun getAllObjects(): List<SemanticObjectEntity>
+
+    @Transaction
+    @Query("SELECT * FROM semantic_object ORDER BY createdAt DESC")
+    fun observeAllWithTranslations(): Flow<List<SemanticObjectWithTranslations>>
 
     @Transaction
     @Query("SELECT * FROM semantic_object ORDER BY createdAt DESC")

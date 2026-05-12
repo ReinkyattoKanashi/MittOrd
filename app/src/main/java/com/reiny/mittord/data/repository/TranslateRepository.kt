@@ -17,7 +17,7 @@ private const val TAG = "TranslateRepo"
 
 interface TranslateRepository {
     suspend fun detectLanguage(text: String): String?
-    suspend fun translateText(text: String, targetLanguageCode: String): String?
+    suspend fun translateText(text: String, targetLanguageCode: String): String
     suspend fun getSupportedLanguages(): List<Language>
 }
 
@@ -42,18 +42,13 @@ class TranslateRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun translateText(text: String, targetLanguageCode: String): String? =
+    override suspend fun translateText(text: String, targetLanguageCode: String): String =
         withContext(Dispatchers.IO) {
-            try {
-                val body = apiService.detectAndTranslate(
-                    client = "gtx", sl = "auto", tl = targetLanguageCode, dt = "t", q = text
-                )
-                val json = JSONArray(body.string())
-                json.getJSONArray(0).getJSONArray(0).getString(0)
-            } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "translateText: ${e.message}")
-                null
-            }
+            val body = apiService.detectAndTranslate(
+                client = "gtx", sl = "auto", tl = targetLanguageCode, dt = "t", q = text
+            )
+            val json = JSONArray(body.string())
+            json.getJSONArray(0).getJSONArray(0).getString(0)
         }
 
     override suspend fun getSupportedLanguages(): List<Language> {

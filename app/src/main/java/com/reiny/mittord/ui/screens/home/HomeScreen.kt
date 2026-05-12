@@ -30,7 +30,6 @@ import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,15 +41,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.reiny.mittord.domain.util.flagForCode
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.reiny.mittord.R
 import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
 import com.reiny.mittord.ui.screens.home.components.AppLogoToolbar
@@ -101,6 +97,16 @@ fun MainScreen(
     val context = LocalContext.current
     var lastBackMs by remember { mutableLongStateOf(0L) }
     val exitMessage = stringResource(R.string.exit_press_again)
+    val errorTranslationFailed = stringResource(R.string.error_translation_failed)
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                HomeEvent.TranslationFailed ->
+                    Toast.makeText(context, errorTranslationFailed, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     BackHandler {
         when (state) {
@@ -120,15 +126,6 @@ fun MainScreen(
                 }
             }
         }
-    }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.reload()
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold(

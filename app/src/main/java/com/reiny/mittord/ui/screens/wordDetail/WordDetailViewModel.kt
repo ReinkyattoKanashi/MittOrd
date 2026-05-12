@@ -8,10 +8,9 @@ import com.reiny.mittord.database.DictionaryRepository
 import com.reiny.mittord.database.TranslationData
 import com.reiny.mittord.database.WordUpdate
 import com.reiny.mittord.domain.usecase.DetectLanguageUseCase
-import com.reiny.mittord.domain.usecase.GetSupportedLanguagesUseCase
+import com.reiny.mittord.domain.usecase.GetOrderedLanguagesUseCase
 import com.reiny.mittord.domain.usecase.TranslateTextUseCase
 import com.reiny.mittord.domain.model.Language
-import com.reiny.mittord.domain.model.LANGUAGES
 import com.reiny.mittord.util.AppConstants
 import com.reiny.mittord.util.AppPreferences
 import com.reiny.mittord.util.WordImageRepository
@@ -21,11 +20,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -57,7 +54,7 @@ class WordDetailViewModel @Inject constructor(
     private val wordImageRepo: WordImageRepository,
     private val detectLanguageUseCase: DetectLanguageUseCase,
     private val translateTextUseCase: TranslateTextUseCase,
-    private val getSupportedLanguagesUseCase: GetSupportedLanguagesUseCase,
+    private val getOrderedLanguagesUseCase: GetOrderedLanguagesUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -69,10 +66,11 @@ class WordDetailViewModel @Inject constructor(
     private val _focusTranslation = MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val focusTranslation = _focusTranslation.asSharedFlow()
 
-    private val _allLanguages = MutableStateFlow<List<Language>>(LANGUAGES)
-    val orderedLanguages: StateFlow<List<Language>> = _allLanguages
-        .map { appPrefs.orderedLanguages(it) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, appPrefs.orderedLanguages())
+    private val _events = MutableSharedFlow<WordDetailEvent>(extraBufferCapacity = 1)
+    val events = _events.asSharedFlow()
+
+    private val _orderedLanguages = MutableStateFlow(appPrefs.orderedLanguages())
+    val orderedLanguages: StateFlow<List<Language>> = _orderedLanguages.asStateFlow()
 
     private var detectWordJob: Job? = null
     private val detectTranslationJobs = mutableMapOf<Int, Job>()
@@ -104,8 +102,7 @@ class WordDetailViewModel @Inject constructor(
     init {
         load()
         viewModelScope.launch {
-            val languages = getSupportedLanguagesUseCase()
-            if (languages.isNotEmpty()) _allLanguages.value = languages
+            _orderedLanguages.value = getOrderedLanguagesUseCase()
         }
     }
 
@@ -204,13 +201,14 @@ class WordDetailViewModel @Inject constructor(
             val current = _state.value.translations.toMutableList()
             if (index in current.indices) {
                 current[index] = current[index].copy(
-                    text = result ?: current[index].text,
+                    text = result.getOrNull() ?: current[index].text,
                     languageCode = targetCode,
                     isAuto = false,
                     isTranslating = false
                 )
                 _state.value = _state.value.copy(translations = current)
             }
+            if (result.isFailure) _events.tryEmit(WordDetailEvent.TranslationFailed)
         }
     }
 
@@ -254,7 +252,7 @@ class WordDetailViewModel @Inject constructor(
         }
     }
 
-    fun save(onDone: () -> Unit) {
+    fun save() {
         val s = _state.value
         viewModelScope.launch {
             repository.updateWordFull(
@@ -269,17 +267,17 @@ class WordDetailViewModel @Inject constructor(
                     wordLanguageCode = s.wordLanguageCode
                 )
             )
-            onDone()
+            _events.emit(WordDetailEvent.Saved)
         }
     }
 
-    fun delete(onDone: () -> Unit) {
+    fun delete() {
         viewModelScope.launch {
             _state.value.imagePath?.let { path ->
                 withContext(Dispatchers.IO) { File(path).delete() }
             }
             repository.deleteWord(wordId)
-            onDone()
+            _events.emit(WordDetailEvent.Deleted)
         }
     }
 

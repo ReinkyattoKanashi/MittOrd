@@ -4,8 +4,8 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.reiny.mittord.database.DictionaryRepository
 import com.reiny.mittord.domain.model.Language
+import com.reiny.mittord.domain.usecase.SeedDatabaseUseCase
 import com.reiny.mittord.util.AppPreferences
 import com.reiny.mittord.util.AvatarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +22,7 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val appPrefs: AppPreferences,
     private val avatarRepo: AvatarRepository,
-    private val dictionaryRepository: DictionaryRepository
+    private val seedDatabaseUseCase: SeedDatabaseUseCase
 ) : ViewModel() {
 
     private val _seedDoneEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -85,16 +85,7 @@ class SettingsViewModel @Inject constructor(
 
     fun seedMockData() {
         viewModelScope.launch {
-            listOf(
-                "hund" to "dog", "katt" to "cat", "hus" to "house", "bil" to "car",
-                "bok" to "book", "vann" to "water", "mat" to "food", "dag" to "day",
-                "natt" to "night", "sol" to "sun", "måne" to "moon", "tre" to "tree",
-                "blomst" to "flower", "fugl" to "bird", "fisk" to "fish", "himmel" to "sky",
-                "fjell" to "mountain", "hav" to "sea", "elv" to "river", "vind" to "wind"
-            ).forEach { (word, translation) ->
-                val id = dictionaryRepository.addWord(word, translation, "en")
-                dictionaryRepository.updateLanguageCode(id, "no")
-            }
+            seedDatabaseUseCase()
             _seedDoneEvent.emit(Unit)
         }
     }

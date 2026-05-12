@@ -1,10 +1,11 @@
 package com.reiny.mittord
 
-import com.reiny.mittord.ui.screens.wordDetail.BCP47_TO_LANG_NAME
-import com.reiny.mittord.ui.screens.wordDetail.LANG_NAME_TO_BCP47
-import com.reiny.mittord.ui.screens.wordDetail.flagForCode
-import com.reiny.mittord.ui.screens.wordDetail.langNameForCode
-import com.reiny.mittord.ui.screens.wordDetail.normalizeCode
+import com.reiny.mittord.domain.model.LANGUAGES
+import com.reiny.mittord.domain.util.BCP47_TO_LANG_NAME
+import com.reiny.mittord.domain.util.LANG_NAME_TO_BCP47
+import com.reiny.mittord.domain.util.flagForCode
+import com.reiny.mittord.domain.util.langNameForCode
+import com.reiny.mittord.domain.util.normalizeCode
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -68,8 +69,7 @@ class LanguageUtilsTest {
 
     @Test
     fun allLanguagesHaveBcp47Code() {
-        val langs = com.reiny.mittord.ui.screens.settings.LANGUAGES
-        val missing = langs.filter { LANG_NAME_TO_BCP47[it.name] == null }
+        val missing = LANGUAGES.filter { LANG_NAME_TO_BCP47[it.name] == null }
         assertTrue("Languages without BCP47: ${missing.map { it.name }}", missing.isEmpty())
     }
 }
