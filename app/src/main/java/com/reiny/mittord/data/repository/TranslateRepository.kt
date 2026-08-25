@@ -3,15 +3,15 @@ package com.reiny.mittord.data.repository
 import android.util.Log
 import com.reiny.mittord.BuildConfig
 import com.reiny.mittord.data.api.TranslateApiService
-import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.domain.model.LANGUAGES
+import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.domain.util.flagForCode
 import com.reiny.mittord.domain.util.normalizeCode
 import com.reiny.mittord.util.AppConstants
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
-import javax.inject.Inject
 
 private const val TAG = "TranslateRepo"
 

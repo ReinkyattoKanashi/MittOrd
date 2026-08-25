@@ -3,17 +3,17 @@ package com.reiny.mittord.util
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.domain.model.LANGUAGES
+import com.reiny.mittord.domain.model.Language
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class AppPreferences @Inject constructor(@ApplicationContext context: Context) {

@@ -1,12 +1,16 @@
 package com.reiny.mittord.ui.screens.settings
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,8 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import android.content.Intent
-import android.widget.Toast
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -30,8 +32,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -64,6 +64,9 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.reiny.mittord.BuildConfig
 import com.reiny.mittord.R
+import com.reiny.mittord.ui.screens.settings.components.AppInfoBlock
+import com.reiny.mittord.ui.screens.settings.components.ClearWordsDialog
+import com.reiny.mittord.ui.screens.settings.components.ProfileCard
 import com.reiny.mittord.ui.theme.Theme
 import com.reiny.mittord.ui.theme.typography
 import com.reiny.mittord.util.AppConstants
@@ -214,7 +217,7 @@ fun SettingsScreen(
                     Spacer(Modifier.height(20.dp))
                 }
 
-                AppInfoCard(
+                AppInfoBlock(
                     onAuthorClick = {
                         val intent = Intent(Intent.ACTION_VIEW, githubUrl.toUri())
                         runCatching { context.startActivity(intent) }.onFailure {
@@ -237,40 +240,12 @@ fun SettingsScreen(
     }
 
     if (showClearWordsDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearWordsDialog = false },
-            title = {
-                Text(
-                    text = stringResource(R.string.dialog_clear_words_title),
-                    style = Theme.typography.h2
-                )
+        ClearWordsDialog(
+            onConfirm = {
+                viewModel.clearAllWords()
+                showClearWordsDialog = false
             },
-            text = {
-                Text(
-                    text = stringResource(R.string.dialog_clear_words_message),
-                    style = Theme.typography.body,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.clearAllWords()
-                        showClearWordsDialog = false
-                    }
-                ) {
-                    Text(
-                        stringResource(R.string.cd_delete),
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearWordsDialog = false }) {
-                    Text(stringResource(R.string.btn_cancel))
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface
+            onDismiss = { showClearWordsDialog = false }
         )
     }
 
@@ -293,143 +268,6 @@ fun SettingsScreen(
                 picker = null
             },
             onDismiss = { picker = null }
-        )
-    }
-}
-
-@Composable
-private fun ProfileCard(
-    avatarPath: String?,
-    avatarVersion: Int,
-    hasAvatar: Boolean,
-    onAvatarClick: () -> Unit,
-    onAvatarDelete: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(modifier = Modifier.size(88.dp)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable(onClick = onAvatarClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (avatarPath != null) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(File(avatarPath))
-                                .memoryCacheKey("avatar-$avatarVersion")
-                                .diskCachePolicy(CachePolicy.DISABLED)
-                                .build(),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Text(
-                            text = stringResource(R.string.profile_initial),
-                            style = Theme.typography.h1,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .align(Alignment.BottomEnd)
-                        .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface)
-                        .clickable(onClick = onAvatarClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                if (hasAvatar) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .align(Alignment.TopEnd)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.error)
-                            .clickable(onClick = onAvatarDelete),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.cd_delete_avatar),
-                            modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onError
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.profile_name),
-                style = Theme.typography.h2,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.profile_subtitle),
-                style = Theme.typography.caption,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-            )
-        }
-    }
-}
-
-
-/** Name, version and author, straight on the background - no card, no dividers. */
-@Composable
-private fun AppInfoCard(onAuthorClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp, horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.settings_app_name),
-            style = Theme.typography.h1
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = stringResource(R.string.settings_version) + " " + BuildConfig.VERSION_NAME,
-            style = Theme.typography.caption,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.settings_author),
-            style = Theme.typography.body,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(onClick = onAuthorClick)
-                .padding(horizontal = 10.dp, vertical = 6.dp)
         )
     }
 }

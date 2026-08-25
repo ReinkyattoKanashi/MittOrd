@@ -1,7 +1,7 @@
 package com.reiny.mittord.domain.usecase
 
-import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.domain.model.LANGUAGES
+import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.util.AppPreferences
 import javax.inject.Inject
 

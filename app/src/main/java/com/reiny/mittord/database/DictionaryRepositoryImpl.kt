@@ -3,8 +3,8 @@ package com.reiny.mittord.database
 import com.reiny.mittord.database.dao.SemanticObjectDao
 import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
 import com.reiny.mittord.database.entity.TranslationEntity
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 
 class DictionaryRepositoryImpl @Inject constructor(
     private val dao: SemanticObjectDao

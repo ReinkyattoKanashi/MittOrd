@@ -60,7 +60,8 @@
     <string name="mock_data_added">Mock data added</string>
     <string name="settings_version">Version</string>
     <string name="settings_app_name">MittOrd</string>
-    <string name="settings_author">by KanashiReinkyatto (Andrii Patiuk)</string>
+    <string name="settings_author">by KanashiReinkyatto</string>
+    <string name="settings_author_name">(Andrii Patiuk)</string>
     <string name="settings_github_url">https://github.com/ReinkyattoKanashi</string>
     <string name="settings_clear_words">Clear all words</string>
     <string name="dialog_clear_words_title">Clear the dictionary?</string>

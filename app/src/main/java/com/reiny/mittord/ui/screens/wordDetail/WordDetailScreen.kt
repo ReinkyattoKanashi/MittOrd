@@ -1,9 +1,9 @@
 package com.reiny.mittord.ui.screens.wordDetail
 
 import androidx.activity.compose.BackHandler
-import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,10 +18,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -45,29 +44,43 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.reiny.mittord.R
+import com.reiny.mittord.domain.util.bcp47
+import com.reiny.mittord.domain.util.langNameForCode
 import com.reiny.mittord.ui.screens.home.components.LanguageFlagButton
 import com.reiny.mittord.ui.screens.home.components.RoundedPrimaryButton
 import com.reiny.mittord.ui.screens.home.components.TranslateButton
 import com.reiny.mittord.ui.screens.home.components.WordInputField
-import com.reiny.mittord.domain.util.bcp47
-import com.reiny.mittord.domain.util.langNameForCode
 import com.reiny.mittord.ui.screens.settings.LanguagePickerSheet
 import com.reiny.mittord.ui.theme.Theme
 import com.reiny.mittord.ui.theme.typography
 import com.reiny.mittord.util.AppConstants
-import kotlinx.coroutines.delay
 import java.io.File
+import kotlinx.coroutines.delay
 
+/**
+ * TODO: a new design for this screen is on the way, and the layout below will be
+ * replaced with it.
+ *
+ * Known issue it is expected to fix: the photo sits in a fixed 200.dp box with
+ * ContentScale.Crop, so tall images are cut off and there is no way to change that.
+ *
+ * Because of the pending redesign only the durable parts were refactored - state
+ * handling, the language pickers and focus management. The composable itself is
+ * still one long function with a block of stringResource calls at the top; splitting
+ * it by section (word / translations / comment / photo / dialogs) is deliberately
+ * left until the new design lands, so the work is not done twice.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WordDetailScreen(

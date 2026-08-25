@@ -3,9 +3,7 @@ package com.reiny.mittord
 import com.reiny.mittord.database.DictionaryRepository
 import com.reiny.mittord.database.TranslationData
 import com.reiny.mittord.database.WordUpdate
-import com.reiny.mittord.database.entity.SemanticObjectEntity
 import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
-import com.reiny.mittord.database.entity.TranslationEntity
 import com.reiny.mittord.domain.usecase.SeedDatabaseUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -22,9 +20,7 @@ class SeedDatabaseUseCaseTest {
 
     private val fakeRepository = object : DictionaryRepository {
         override fun observeAll(): Flow<List<SemanticObjectWithTranslations>> = emptyFlow()
-        override suspend fun list(): List<SemanticObjectEntity> = emptyList()
         override suspend fun getWordWithTranslations(id: Long): SemanticObjectWithTranslations? = null
-        override suspend fun getTranslations(objectId: Long): List<TranslationEntity> = emptyList()
         override suspend fun addWord(baseWord: String, translation: String, translationLanguageCode: String?): Long {
             addWordCallCount++
             return ++lastId
@@ -32,6 +28,7 @@ class SeedDatabaseUseCaseTest {
         override suspend fun updateLanguageCode(id: Long, code: String) { updateLanguageCodeCallCount++ }
         override suspend fun updateWordFull(id: Long, update: WordUpdate) {}
         override suspend fun deleteWord(id: Long) {}
+        override suspend fun deleteAllWords() {}
     }
 
     @Before

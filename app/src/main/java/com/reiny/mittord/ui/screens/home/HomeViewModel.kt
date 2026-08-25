@@ -3,18 +3,15 @@ package com.reiny.mittord.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.reiny.mittord.database.DictionaryRepository
-import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
 import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.domain.usecase.DetectLanguageUseCase
 import com.reiny.mittord.domain.usecase.GetOrderedLanguagesUseCase
 import com.reiny.mittord.domain.usecase.TranslateTextUseCase
-import com.reiny.mittord.domain.util.LANG_NAME_TO_BCP47
 import com.reiny.mittord.domain.util.LanguageDetector
-import com.reiny.mittord.domain.util.flagForCode
-import com.reiny.mittord.domain.util.normalizeCode
 import com.reiny.mittord.ui.screens.home.components.BottomNavState
 import com.reiny.mittord.util.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,7 +22,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 private const val WORD_FIELD = "word"
 private const val TRANSLATION_FIELD = "translation"
@@ -219,34 +215,5 @@ class HomeViewModel @Inject constructor(
     private fun resetAddWord() {
         detector.cancelAll()
         _addWord.value = AddWordUiState()
-    }
-
-    private fun nativeLanguageCode(languages: List<Language>, name: String): String? {
-        val code = languages.firstOrNull { it.name == name }?.code?.takeIf { it.isNotEmpty() }
-            ?: LANG_NAME_TO_BCP47[name]
-        return code?.let { normalizeCode(it) }
-    }
-
-    private fun SemanticObjectWithTranslations.matches(query: String): Boolean =
-        semanticObject.baseWord.contains(query, ignoreCase = true) ||
-            translations.any { it.text.contains(query, ignoreCase = true) }
-
-    /**
-     * Picks the translation shown in the list: the one in the user's native language,
-     * falling back to the first stored one. The relation has no guaranteed order,
-     * so it is sorted by id to keep the choice stable between openings.
-     */
-    private fun SemanticObjectWithTranslations.toListItem(nativeCode: String?): WordListItem {
-        val ordered = translations.sortedBy { it.id }
-        val chosen = nativeCode
-            ?.let { code -> ordered.firstOrNull { normalizeCode(it.languageCode) == code } }
-            ?: ordered.firstOrNull()
-        return WordListItem(
-            id = semanticObject.id,
-            word = semanticObject.baseWord,
-            wordFlag = flagForCode(semanticObject.wordLanguageCode),
-            translation = chosen?.text?.takeIf { it.isNotBlank() },
-            translationFlag = chosen?.let { flagForCode(it.languageCode) }
-        )
     }
 }
