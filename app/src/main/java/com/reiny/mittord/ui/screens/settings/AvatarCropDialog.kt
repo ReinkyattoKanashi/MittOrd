@@ -33,9 +33,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.reiny.mittord.R
 import com.reiny.mittord.ui.theme.Theme
 import com.reiny.mittord.ui.theme.typography
 
@@ -119,11 +121,11 @@ fun AvatarCropDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onCancel) {
-                    Text("Cancel", color = Color.White, style = Theme.typography.body)
+                    Text(stringResource(R.string.btn_cancel_crop), color = Color.White, style = Theme.typography.body)
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "Move and scale",
+                    text = stringResource(R.string.crop_hint),
                     color = Color.White.copy(alpha = 0.45f),
                     style = Theme.typography.caption
                 )
@@ -132,7 +134,7 @@ fun AvatarCropDialog(
                     val cropped = performCrop(sourceBitmap, totalScale, offset, cropRadius)
                     onConfirm(cropped.asImageBitmap())
                 }) {
-                    Text("Done", color = Color.White, style = Theme.typography.body)
+                    Text(stringResource(R.string.btn_done), color = Color.White, style = Theme.typography.body)
                 }
             }
         }

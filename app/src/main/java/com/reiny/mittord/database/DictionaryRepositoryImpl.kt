@@ -1,7 +1,6 @@
 package com.reiny.mittord.database
 
 import com.reiny.mittord.database.dao.SemanticObjectDao
-import com.reiny.mittord.database.entity.SemanticObjectEntity
 import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
 import com.reiny.mittord.database.entity.TranslationEntity
 import kotlinx.coroutines.flow.Flow
@@ -13,9 +12,6 @@ class DictionaryRepositoryImpl @Inject constructor(
 
     override fun observeAll(): Flow<List<SemanticObjectWithTranslations>> =
         dao.observeAllWithTranslations()
-
-    override suspend fun list(): List<SemanticObjectEntity> =
-        dao.getAllObjects()
 
     override suspend fun getWordWithTranslations(id: Long): SemanticObjectWithTranslations? =
         dao.getObjectWithTranslations(id)
@@ -57,5 +53,9 @@ class DictionaryRepositoryImpl @Inject constructor(
 
     override suspend fun deleteWord(id: Long) {
         dao.deleteObjectById(id)
+    }
+
+    override suspend fun deleteAllWords() {
+        dao.deleteAllObjects()
     }
 }

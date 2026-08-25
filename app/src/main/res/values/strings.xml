@@ -58,14 +58,24 @@
     <string name="settings_developer">Developer</string>
     <string name="settings_add_mock_data">Add mock data</string>
     <string name="mock_data_added">Mock data added</string>
-    <string name="settings_about">About</string>
     <string name="settings_version">Version</string>
-    <string name="settings_app_label">App</string>
     <string name="settings_app_name">MittOrd</string>
+    <string name="settings_author">by KanashiReinkyatto (Andrii Patiuk)</string>
+    <string name="settings_github_url">https://github.com/ReinkyattoKanashi</string>
+    <string name="settings_clear_words">Clear all words</string>
+    <string name="dialog_clear_words_title">Clear the dictionary?</string>
+    <string name="dialog_clear_words_message">Every word, translation and photo will be deleted. This cannot be undone.</string>
+    <string name="words_cleared">Dictionary cleared</string>
+    <string name="error_no_browser">No app can open this link.</string>
     <string name="cd_delete_avatar">Delete avatar</string>
     <string name="auto_detect">Auto-detect</string>
     <string name="error_translation_failed">Translation failed. Check your connection.</string>
     <string name="error_image_save_failed">Could not save the photo.</string>
+    <string name="error_avatar_failed">Could not update the avatar.</string>
+    <string name="crop_hint">Move and scale</string>
+    <string name="btn_cancel_crop">Cancel</string>
+    <string name="btn_done">Done</string>
+    <string name="profile_initial">L</string>
     <string name="profile_name">Learner</string>
     <string name="profile_subtitle">Vocabulary learner</string>
 </resources>

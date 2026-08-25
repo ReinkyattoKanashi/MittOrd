@@ -1,10 +1,16 @@
 package com.reiny.mittord.util
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.domain.model.LANGUAGES
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,6 +19,22 @@ import javax.inject.Singleton
 class AppPreferences @Inject constructor(@ApplicationContext context: Context) {
 
     private val prefs = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
+
+    // Bumped on every write so screens can react to settings changed elsewhere.
+    // The listener is held in a field on purpose: SharedPreferences keeps only a weak
+    // reference, and an anonymous one would be collected and silently stop firing.
+    private val revision = MutableStateFlow(0)
+    private val changeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        revision.update { it + 1 }
+    }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(changeListener)
+    }
+
+    /** Current native language, and again whenever it is changed. */
+    val nativeLanguageChanges: Flow<String> =
+        revision.map { nativeLanguage }.distinctUntilChanged()
 
     var avatarPath: String?
         get() = prefs.getString(AppConstants.PREF_AVATAR_PATH, null)?.takeIf { File(it).exists() }

@@ -7,7 +7,6 @@ import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
 import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.domain.usecase.DetectLanguageUseCase
 import com.reiny.mittord.domain.usecase.GetOrderedLanguagesUseCase
-import com.reiny.mittord.domain.usecase.SeedDatabaseUseCase
 import com.reiny.mittord.domain.usecase.TranslateTextUseCase
 import com.reiny.mittord.domain.util.LANG_NAME_TO_BCP47
 import com.reiny.mittord.domain.util.LanguageDetector
@@ -37,8 +36,7 @@ class HomeViewModel @Inject constructor(
     private val appPrefs: AppPreferences,
     private val detectLanguageUseCase: DetectLanguageUseCase,
     private val translateTextUseCase: TranslateTextUseCase,
-    private val getOrderedLanguagesUseCase: GetOrderedLanguagesUseCase,
-    private val seedDatabaseUseCase: SeedDatabaseUseCase
+    private val getOrderedLanguagesUseCase: GetOrderedLanguagesUseCase
 ) : ViewModel() {
 
     // Kept apart on purpose: navState changes on a tap, searchQuery on every
@@ -57,8 +55,13 @@ class HomeViewModel @Inject constructor(
     val orderedLanguages: StateFlow<List<Language>> = _orderedLanguages.asStateFlow()
 
     val words: StateFlow<WordsUiState> =
-        combine(repository.observeAll(), _searchQuery, _orderedLanguages) { all, query, languages ->
-            val nativeCode = nativeLanguageCode(languages)
+        combine(
+            repository.observeAll(),
+            _searchQuery,
+            _orderedLanguages,
+            appPrefs.nativeLanguageChanges
+        ) { all, query, languages, nativeName ->
+            val nativeCode = nativeLanguageCode(languages, nativeName)
             val matched = if (query.isBlank()) all else all.filter { it.matches(query) }
             WordsUiState(
                 words = matched.map { it.toListItem(nativeCode) },
@@ -77,7 +80,6 @@ class HomeViewModel @Inject constructor(
     private val detector = LanguageDetector(viewModelScope, detectLanguageUseCase)
 
     init {
-        seedIfEmpty()
         viewModelScope.launch {
             _orderedLanguages.value = getOrderedLanguagesUseCase()
         }
@@ -219,14 +221,7 @@ class HomeViewModel @Inject constructor(
         _addWord.value = AddWordUiState()
     }
 
-    private fun seedIfEmpty() {
-        viewModelScope.launch {
-            if (repository.list().isEmpty()) seedDatabaseUseCase()
-        }
-    }
-
-    private fun nativeLanguageCode(languages: List<Language>): String? {
-        val name = appPrefs.nativeLanguage
+    private fun nativeLanguageCode(languages: List<Language>, name: String): String? {
         val code = languages.firstOrNull { it.name == name }?.code?.takeIf { it.isNotEmpty() }
             ?: LANG_NAME_TO_BCP47[name]
         return code?.let { normalizeCode(it) }

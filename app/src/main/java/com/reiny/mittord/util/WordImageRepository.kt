@@ -18,4 +18,9 @@ class WordImageRepository @Inject constructor(@ApplicationContext private val co
         }
         return dest.absolutePath
     }
+
+    /** Drops every stored word photo; used when the dictionary is wiped. */
+    fun deleteAll() {
+        File(context.filesDir, AppConstants.WORD_IMAGES_DIR).deleteRecursively()
+    }
 }

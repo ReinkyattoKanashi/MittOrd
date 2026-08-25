@@ -40,9 +40,6 @@ interface SemanticObjectDao {
 
     // ---------- GET ----------
 
-    @Query("SELECT * FROM semantic_object ORDER BY createdAt DESC")
-    suspend fun getAllObjects(): List<SemanticObjectEntity>
-
     @Transaction
     @Query("SELECT * FROM semantic_object ORDER BY createdAt DESC")
     fun observeAllWithTranslations(): Flow<List<SemanticObjectWithTranslations>>
@@ -66,4 +63,8 @@ interface SemanticObjectDao {
 
     @Query("DELETE FROM semantic_object WHERE id = :id")
     suspend fun deleteObjectById(id: Long)
+
+    /** Translations are removed by the CASCADE foreign key. */
+    @Query("DELETE FROM semantic_object")
+    suspend fun deleteAllObjects()
 }
