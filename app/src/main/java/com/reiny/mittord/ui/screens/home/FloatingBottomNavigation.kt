@@ -1,7 +1,9 @@
 package com.reiny.mittord.ui.screens.home
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -31,7 +33,6 @@ import com.reiny.mittord.ui.screens.home.components.NavCenterButton
 import com.reiny.mittord.ui.screens.home.components.NavIconsRow
 import com.reiny.mittord.ui.screens.home.components.NavSearchField
 import com.reiny.mittord.ui.screens.home.components.SearchState
-import com.reiny.mittord.ui.screens.home.components.rememberBottomNavTint
 import com.reiny.mittord.ui.theme.MittOrdTheme
 import com.reiny.mittord.util.MeasureAvailableWidth
 import com.reiny.mittord.util.height
@@ -70,16 +71,18 @@ fun FloatingBottomNavigationDefault(
     modifier: Modifier = Modifier,
     parentHeight: Dp
 ) {
-    val backgroundBoxHeight by animateDpAsState(
-        targetValue = if (state == BottomNavState.AddWord) parentHeight else COLLAPSED_HEIGHT,
-        animationSpec = NavBarAnimation.slideDpSpec,
+    val transition = updateTransition(state, label = "navBar")
+
+    val backgroundBoxHeight by transition.animateDp(
+        transitionSpec = { NavBarAnimation.slideDpSpec },
         label = "backgroundBoxHeight"
-    )
-    val boxTopPadding by animateDpAsState(
-        targetValue = if (state == BottomNavState.AddWord) PANEL_TOP_INSET else 0.dp,
-        animationSpec = NavBarAnimation.slideDpSpec,
+    ) { if (it == BottomNavState.AddWord) parentHeight else COLLAPSED_HEIGHT }
+
+    val boxTopPadding by transition.animateDp(
+        transitionSpec = { NavBarAnimation.slideDpSpec },
         label = "boxTopPadding"
-    )
+    ) { if (it == BottomNavState.AddWord) PANEL_TOP_INSET else 0.dp }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -90,32 +93,37 @@ fun FloatingBottomNavigationDefault(
         var targetWidth by remember { mutableStateOf(CENTER_BUTTON_SIZE) }
         MeasureAvailableWidth(fraction = BAR_WIDTH_FRACTION) { width -> targetWidth = width }
 
-        val width by animateDpAsState(
-            targetValue = if (state == BottomNavState.Search) targetWidth else CENTER_BUTTON_SIZE,
-            animationSpec = NavBarAnimation.defaultDpTween,
+        val width by transition.animateDp(
+            transitionSpec = { NavBarAnimation.defaultDpTween },
             label = "centerWidth"
-        )
-        val bias by animateFloatAsState(
-            targetValue = if (state == BottomNavState.Search) 1f else 0f,
-            animationSpec = NavBarAnimation.tweenFloatSpec,
+        ) { if (it == BottomNavState.Search) targetWidth else CENTER_BUTTON_SIZE }
+
+        val bias by transition.animateFloat(
+            transitionSpec = { NavBarAnimation.tweenFloatSpec },
             label = "centerBias"
-        )
-        val rotation by animateFloatAsState(
-            targetValue = if (state == BottomNavState.Search) 45f else 0f,
-            animationSpec = NavBarAnimation.tweenFloatSpec,
+        ) { if (it == BottomNavState.Search) 1f else 0f }
+
+        val rotation by transition.animateFloat(
+            transitionSpec = { NavBarAnimation.tweenFloatSpec },
             label = "centerRotation"
-        )
-        val offsetY by animateDpAsState(
-            targetValue = if (state == BottomNavState.AddWord) 5.dp else 0.dp,
-            animationSpec = NavBarAnimation.slideDpSpec,
+        ) { if (it == BottomNavState.Search) 45f else 0f }
+
+        val offsetY by transition.animateDp(
+            transitionSpec = { NavBarAnimation.slideDpSpec },
             label = "centerOffsetY"
-        )
-        val addIconAlpha by animateFloatAsState(
-            targetValue = if (state == BottomNavState.AddWord) 0f else 1f,
-            animationSpec = NavBarAnimation.tweenFloatSpec,
+        ) { if (it == BottomNavState.AddWord) 5.dp else 0.dp }
+
+        val addIconAlpha by transition.animateFloat(
+            transitionSpec = { NavBarAnimation.tweenFloatSpec },
             label = "addIconAlpha"
-        )
-        val iconsTint = rememberBottomNavTint(state)
+        ) { if (it == BottomNavState.AddWord) 0f else 1f }
+
+        val onSurface = MaterialTheme.colorScheme.onSurface
+        val onPrimary = MaterialTheme.colorScheme.onPrimary
+        val iconsTint by transition.animateColor(
+            transitionSpec = { NavBarAnimation.defaultTweenColor },
+            label = "iconsTint"
+        ) { if (it == BottomNavState.Default) onSurface else onPrimary }
 
         PanelSurface(
             height = { backgroundBoxHeight },
@@ -151,7 +159,7 @@ fun FloatingBottomNavigationDefault(
             ) {
                 NavIconsRow(
                     state = { state },
-                    iconsTint = { iconsTint.value },
+                    iconsTint = { iconsTint },
                     onLeftClick = onLeftClick,
                     onRightClick = onRightClick
                 )

@@ -1,9 +1,6 @@
 package com.reiny.mittord.ui.screens.home.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Animatable
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector4D
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,11 +15,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -99,25 +93,4 @@ internal fun NavIconsRow(
             }
         }
     }
-}
-
-/**
- * Icon tint that crossfades when the bar leaves its default state. Returned as an
- * [Animatable] so callers can read `.value` from a lambda in the draw phase.
- */
-@Composable
-internal fun rememberBottomNavTint(state: BottomNavState): Animatable<Color, AnimationVector4D> {
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    val onPrimary = MaterialTheme.colorScheme.onPrimary
-
-    val anim = remember { Animatable(onSurface) }
-
-    LaunchedEffect(state) {
-        val target = if (state == BottomNavState.Default) onSurface else onPrimary
-        anim.animateTo(
-            targetValue = target, animationSpec = NavBarAnimation.defaultTweenColor
-        )
-    }
-
-    return anim
 }
