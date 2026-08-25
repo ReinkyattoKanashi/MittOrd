@@ -69,12 +69,17 @@ fun LanguageFlagButton(
 }
 
 @Composable
+/**
+ * @param enabled translating needs a source word; without one the request would be
+ *   dropped further down without any feedback, so the button says so up front.
+ */
 fun TranslateButton(
     onClick: () -> Unit,
     isLoading: Boolean = false,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    IconButton(onClick = onClick, modifier = modifier) {
+    IconButton(onClick = onClick, enabled = enabled, modifier = modifier) {
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(18.dp),
@@ -86,7 +91,11 @@ fun TranslateButton(
                 painter = painterResource(R.drawable.ic_translate),
                 contentDescription = null,
                 modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = if (enabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                }
             )
         }
     }

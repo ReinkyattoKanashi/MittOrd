@@ -160,7 +160,8 @@ internal fun AddWordPanel(
                 )
                 TranslateButton(
                     onClick = { picker = PickerRequest.TranslateInto },
-                    isLoading = input.isTranslating
+                    isLoading = input.isTranslating,
+                    enabled = input.word.isNotBlank()
                 )
             }
         }

@@ -31,6 +31,13 @@ private const val FOCUS_DELAY_MS = 100L
 /** Width of an IconButton, held by a spacer so the field does not jump when it appears. */
 private val CLEAR_BUTTON_WIDTH = 48.dp
 
+/**
+ * Room kept free on the right for the rotated plus of the center button, which slides
+ * to that edge in search mode. Without it the clear button lands on top of it and the
+ * bar shows two crosses stacked over each other.
+ */
+private val CENTER_ICON_RESERVE = 56.dp
+
 /** Search input that lives inside the widened center button of the navigation bar. */
 @Composable
 internal fun BoxScope.NavSearchField(
@@ -78,6 +85,7 @@ internal fun BoxScope.NavSearchField(
             } else {
                 Spacer(Modifier.width(CLEAR_BUTTON_WIDTH))
             }
+            Spacer(Modifier.width(CENTER_ICON_RESERVE))
         }
     }
 }

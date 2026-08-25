@@ -245,7 +245,8 @@ fun WordDetailScreen(
                     )
                     TranslateButton(
                         onClick = { picker = PickerRequest.TranslateInto(i) },
-                        isLoading = entry.isTranslating
+                        isLoading = entry.isTranslating,
+                        enabled = state.word.isNotBlank()
                     )
                     if (state.translations.size > 1) {
                         IconButton(onClick = { viewModel.removeTranslation(i) }) {
