@@ -9,6 +9,10 @@ import com.reiny.mittord.domain.usecase.DetectLanguageUseCase
 import com.reiny.mittord.domain.usecase.GetOrderedLanguagesUseCase
 import com.reiny.mittord.domain.usecase.SeedDatabaseUseCase
 import com.reiny.mittord.domain.usecase.TranslateTextUseCase
+import com.reiny.mittord.domain.util.LANG_NAME_TO_BCP47
+import com.reiny.mittord.domain.util.flagForCode
+import com.reiny.mittord.domain.util.normalizeCode
+import com.reiny.mittord.ui.screens.home.components.BottomNavState
 import com.reiny.mittord.util.AppConstants
 import com.reiny.mittord.util.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +26,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -35,47 +40,36 @@ class HomeViewModel @Inject constructor(
     private val seedDatabaseUseCase: SeedDatabaseUseCase
 ) : ViewModel() {
 
+    private val _navState = MutableStateFlow(BottomNavState.Default)
     private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val filteredWords: StateFlow<List<SemanticObjectWithTranslations>> =
-        combine(repository.observeAll(), _searchQuery) { words, query ->
-            if (query.isBlank()) words
-            else words.filter { item ->
-                item.semanticObject.baseWord.contains(query, ignoreCase = true) ||
-                item.translations.any { it.text.contains(query, ignoreCase = true) }
-            }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val nav: StateFlow<NavUiState> =
+        combine(_navState, _searchQuery) { state, query -> NavUiState(state, query) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, NavUiState())
 
-    private val _wordInput = MutableStateFlow("")
-    val wordInput: StateFlow<String> = _wordInput.asStateFlow()
-
-    private val _translationInput = MutableStateFlow("")
-    val translationInput: StateFlow<String> = _translationInput.asStateFlow()
-
-    private val _wordLanguageCode = MutableStateFlow<String?>(null)
-    val wordLanguageCode: StateFlow<String?> = _wordLanguageCode.asStateFlow()
-
-    private val _translationLanguageCode = MutableStateFlow<String?>(null)
-    val translationLanguageCode: StateFlow<String?> = _translationLanguageCode.asStateFlow()
-
-    private val _wordLanguageIsAuto = MutableStateFlow(true)
-    val wordLanguageIsAuto: StateFlow<Boolean> = _wordLanguageIsAuto.asStateFlow()
-
-    private val _translationLanguageIsAuto = MutableStateFlow(true)
-    val translationLanguageIsAuto: StateFlow<Boolean> = _translationLanguageIsAuto.asStateFlow()
-
-    private val _isTranslatingTranslation = MutableStateFlow(false)
-    val isTranslatingTranslation: StateFlow<Boolean> = _isTranslatingTranslation.asStateFlow()
-
-    private val _scrollToTop = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val scrollToTop = _scrollToTop.asSharedFlow()
-
-    private val _events = MutableSharedFlow<HomeEvent>(extraBufferCapacity = 1)
-    val events = _events.asSharedFlow()
+    private val _addWord = MutableStateFlow(AddWordUiState())
+    val addWord: StateFlow<AddWordUiState> = _addWord.asStateFlow()
 
     private val _orderedLanguages = MutableStateFlow(appPrefs.orderedLanguages())
     val orderedLanguages: StateFlow<List<Language>> = _orderedLanguages.asStateFlow()
+
+    val words: StateFlow<WordsUiState> =
+        combine(repository.observeAll(), _searchQuery, _orderedLanguages) { all, query, languages ->
+            val nativeCode = nativeLanguageCode(languages)
+            val matched = if (query.isBlank()) all else all.filter { it.matches(query) }
+            WordsUiState(
+                words = matched.map { it.toListItem(nativeCode) },
+                isLoading = false,
+                isFiltered = query.isNotBlank()
+            )
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, WordsUiState())
+
+    /** Id of a freshly added word the list should scroll to. */
+    private val _scrollToWord = MutableSharedFlow<Long>(extraBufferCapacity = 1)
+    val scrollToWord = _scrollToWord.asSharedFlow()
+
+    private val _events = MutableSharedFlow<HomeEvent>(extraBufferCapacity = 1)
+    val events = _events.asSharedFlow()
 
     private var detectWordJob: Job? = null
     private var detectTranslationJob: Job? = null
@@ -87,119 +81,165 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // ---------- bottom navigation ----------
+
+    fun onSearchClick() {
+        if (_navState.value == BottomNavState.Default) _navState.value = BottomNavState.Search
+    }
+
+    fun onCenterClick() {
+        when (_navState.value) {
+            BottomNavState.Default -> _navState.value = BottomNavState.AddWord
+            BottomNavState.Search, BottomNavState.AddWord -> collapse()
+        }
+    }
+
+    /** @return true if the press was consumed by collapsing an open panel. */
+    fun onBackPressed(): Boolean {
+        if (_navState.value == BottomNavState.Default) return false
+        collapse()
+        return true
+    }
+
+    private fun collapse() {
+        _navState.value = BottomNavState.Default
+        _searchQuery.value = ""
+        resetAddWord()
+    }
+
+    // ---------- search ----------
+
+    fun onSearchChange(value: String) {
+        _searchQuery.value = value
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
+    }
+
+    // ---------- add word ----------
+
     fun onWordChange(value: String) {
-        _wordInput.value = value
-        if (!_wordLanguageIsAuto.value) return
-        detectWordJob?.cancel()
-        val trimmed = value.trim()
-        if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
-            detectWordJob = viewModelScope.launch {
-                delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
-                _wordLanguageCode.value = detectLanguageUseCase(trimmed)
-            }
-        } else {
-            _wordLanguageCode.value = null
+        _addWord.update { it.copy(word = value) }
+        if (!_addWord.value.wordLanguageIsAuto) return
+        detectWordJob = detectLanguage(value, debounce = true, previous = detectWordJob) { code ->
+            _addWord.update { it.copy(wordLanguageCode = code) }
         }
     }
 
     fun onTranslationChange(value: String) {
-        _translationInput.value = value
-        if (!_translationLanguageIsAuto.value) return
-        detectTranslationJob?.cancel()
-        val trimmed = value.trim()
-        if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
-            detectTranslationJob = viewModelScope.launch {
-                delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
-                _translationLanguageCode.value = detectLanguageUseCase(trimmed)
+        _addWord.update { it.copy(translation = value) }
+        if (!_addWord.value.translationLanguageIsAuto) return
+        detectTranslationJob =
+            detectLanguage(value, debounce = true, previous = detectTranslationJob) { code ->
+                _addWord.update { it.copy(translationLanguageCode = code) }
             }
-        } else {
-            _translationLanguageCode.value = null
-        }
     }
 
     fun onWordLanguageSelected(code: String?) {
-        detectWordJob?.cancel()
-        if (code == null) {
-            _wordLanguageIsAuto.value = true
-            val trimmed = _wordInput.value.trim()
-            if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
-                detectWordJob = viewModelScope.launch {
-                    _wordLanguageCode.value = detectLanguageUseCase(trimmed)
-                }
-            } else {
-                _wordLanguageCode.value = null
-            }
-        } else {
-            _wordLanguageIsAuto.value = false
-            _wordLanguageCode.value = code
+        if (code != null) {
+            detectWordJob?.cancel()
+            _addWord.update { it.copy(wordLanguageCode = code, wordLanguageIsAuto = false) }
+            return
         }
+        _addWord.update { it.copy(wordLanguageIsAuto = true) }
+        detectWordJob =
+            detectLanguage(_addWord.value.word, debounce = false, previous = detectWordJob) { detected ->
+                _addWord.update { it.copy(wordLanguageCode = detected) }
+            }
     }
 
     fun onTranslationLanguageSelected(code: String?) {
-        detectTranslationJob?.cancel()
-        if (code == null) {
-            _translationLanguageIsAuto.value = true
-            val trimmed = _translationInput.value.trim()
-            if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
-                detectTranslationJob = viewModelScope.launch {
-                    _translationLanguageCode.value = detectLanguageUseCase(trimmed)
-                }
-            } else {
-                _translationLanguageCode.value = null
+        if (code != null) {
+            detectTranslationJob?.cancel()
+            _addWord.update {
+                it.copy(translationLanguageCode = code, translationLanguageIsAuto = false)
             }
-        } else {
-            _translationLanguageIsAuto.value = false
-            _translationLanguageCode.value = code
+            return
+        }
+        _addWord.update { it.copy(translationLanguageIsAuto = true) }
+        detectTranslationJob = detectLanguage(
+            _addWord.value.translation,
+            debounce = false,
+            previous = detectTranslationJob
+        ) { detected ->
+            _addWord.update { it.copy(translationLanguageCode = detected) }
         }
     }
 
     fun translateTranslation(targetCode: String) {
-        val sourceText = _wordInput.value.trim()
+        val sourceText = _addWord.value.word.trim()
         if (sourceText.isBlank()) return
-        _isTranslatingTranslation.value = true
-        _translationLanguageIsAuto.value = false
-        _translationLanguageCode.value = targetCode
+        _addWord.update {
+            it.copy(
+                isTranslating = true,
+                translationLanguageIsAuto = false,
+                translationLanguageCode = targetCode
+            )
+        }
         viewModelScope.launch {
             val result = translateTextUseCase(sourceText, targetCode)
-            result.onSuccess { _translationInput.value = it }
+            result.onSuccess { text -> _addWord.update { it.copy(translation = text) } }
             result.onFailure { _events.tryEmit(HomeEvent.TranslationFailed) }
-            _isTranslatingTranslation.value = false
+            _addWord.update { it.copy(isTranslating = false) }
         }
     }
 
-    fun setExternalWord(word: String) {
-        _wordInput.value = word
-        _wordLanguageIsAuto.value = true
-        _wordLanguageCode.value = null
-        detectWordJob?.cancel()
-        if (word.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
-            detectWordJob = viewModelScope.launch {
-                _wordLanguageCode.value = detectLanguageUseCase(word)
-            }
+    /** Text handed over by another app through the PROCESS_TEXT intent. */
+    fun onSharedText(text: String) {
+        _addWord.value = AddWordUiState(word = text)
+        _navState.value = BottomNavState.AddWord
+        detectWordJob = detectLanguage(text, debounce = false, previous = detectWordJob) { code ->
+            _addWord.update { it.copy(wordLanguageCode = code) }
+        }
+    }
+
+    fun addWord() {
+        val current = _addWord.value
+        val word = current.word.trim()
+        if (word.isBlank()) return
+        val translation = current.translation.trim()
+        val knownWordCode = current.wordLanguageCode
+        val knownTranslationCode = current.translationLanguageCode
+        collapse()
+        viewModelScope.launch {
+            val id = repository.addWord(word, translation, knownTranslationCode)
+            _scrollToWord.tryEmit(id)
+            val code = knownWordCode ?: detectLanguageUseCase(word)
+            if (code != null) repository.updateLanguageCode(id, code)
         }
     }
 
     fun addRecentLanguage(name: String) = appPrefs.addRecentLanguage(name)
 
-    fun onSearchChange(value: String) { _searchQuery.value = value }
+    // ---------- internals ----------
 
-    fun clearInputs() = resetInputs()
-
-    fun clearSearch() { _searchQuery.value = "" }
-
-    fun addWord() {
-        val word = _wordInput.value.trim()
-        if (word.isBlank()) return
-        val translation = _translationInput.value.trim()
-        val knownWordCode = _wordLanguageCode.value
-        val knownTransCode = _translationLanguageCode.value
-        viewModelScope.launch {
-            val id = repository.addWord(word, translation, knownTransCode)
-            resetInputs()
-            val code = knownWordCode ?: detectLanguageUseCase(word)
-            if (code != null) repository.updateLanguageCode(id, code)
-            _scrollToTop.tryEmit(Unit)
+    /**
+     * Cancels [previous], then detects the language of [text] and reports it to [onResult].
+     * Text shorter than the minimum reports null right away and starts no job.
+     */
+    private fun detectLanguage(
+        text: String,
+        debounce: Boolean,
+        previous: Job?,
+        onResult: (String?) -> Unit
+    ): Job? {
+        previous?.cancel()
+        val trimmed = text.trim()
+        if (trimmed.length < AppConstants.LANG_DETECT_MIN_LENGTH) {
+            onResult(null)
+            return null
         }
+        return viewModelScope.launch {
+            if (debounce) delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
+            onResult(detectLanguageUseCase(trimmed))
+        }
+    }
+
+    private fun resetAddWord() {
+        detectWordJob?.cancel()
+        detectTranslationJob?.cancel()
+        _addWord.value = AddWordUiState()
     }
 
     private fun seedIfEmpty() {
@@ -208,16 +248,33 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun resetInputs() {
-        _wordInput.value = ""
-        _translationInput.value = ""
-        _wordLanguageCode.value = null
-        _translationLanguageCode.value = null
-        _wordLanguageIsAuto.value = true
-        _translationLanguageIsAuto.value = true
-        _isTranslatingTranslation.value = false
-        detectWordJob?.cancel()
-        detectTranslationJob?.cancel()
+    private fun nativeLanguageCode(languages: List<Language>): String? {
+        val name = appPrefs.nativeLanguage
+        val code = languages.firstOrNull { it.name == name }?.code?.takeIf { it.isNotEmpty() }
+            ?: LANG_NAME_TO_BCP47[name]
+        return code?.let { normalizeCode(it) }
     }
 
+    private fun SemanticObjectWithTranslations.matches(query: String): Boolean =
+        semanticObject.baseWord.contains(query, ignoreCase = true) ||
+            translations.any { it.text.contains(query, ignoreCase = true) }
+
+    /**
+     * Picks the translation shown in the list: the one in the user's native language,
+     * falling back to the first stored one. The relation has no guaranteed order,
+     * so it is sorted by id to keep the choice stable between openings.
+     */
+    private fun SemanticObjectWithTranslations.toListItem(nativeCode: String?): WordListItem {
+        val ordered = translations.sortedBy { it.id }
+        val chosen = nativeCode
+            ?.let { code -> ordered.firstOrNull { normalizeCode(it.languageCode) == code } }
+            ?: ordered.firstOrNull()
+        return WordListItem(
+            id = semanticObject.id,
+            word = semanticObject.baseWord,
+            wordFlag = flagForCode(semanticObject.wordLanguageCode),
+            translation = chosen?.text?.takeIf { it.isNotBlank() },
+            translationFlag = chosen?.let { flagForCode(it.languageCode) }
+        )
+    }
 }

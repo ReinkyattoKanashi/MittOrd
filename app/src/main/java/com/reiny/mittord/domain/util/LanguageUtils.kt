@@ -1,5 +1,7 @@
 package com.reiny.mittord.domain.util
 
+import com.reiny.mittord.domain.model.Language
+
 val BCP47_TO_LANG_NAME = mapOf(
     "en" to "English", "ru" to "Russian", "no" to "Norwegian",
     "es" to "Spanish", "fr" to "French", "de" to "German",
@@ -69,3 +71,9 @@ fun flagForCode(code: String?): String? {
 
 fun langNameForCode(code: String?): String? =
     BCP47_TO_LANG_NAME[code]
+
+/**
+ * BCP-47 code of this language, or null when it is unknown. The API list already
+ * carries codes; the bundled fallback list is matched by name.
+ */
+fun Language.bcp47(): String? = code.takeIf { it.isNotEmpty() } ?: LANG_NAME_TO_BCP47[name]

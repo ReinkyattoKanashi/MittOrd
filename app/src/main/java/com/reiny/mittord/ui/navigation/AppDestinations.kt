@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -21,7 +22,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.reiny.mittord.ui.screens.home.MainScreen
+import com.reiny.mittord.ui.screens.home.HomeScreen
 import com.reiny.mittord.ui.screens.settings.SettingsScreen
 import com.reiny.mittord.ui.screens.wordDetail.WordDetailScreen
 import com.reiny.mittord.ui.splash.SplashScreen
@@ -42,7 +43,9 @@ fun AppNavHost(
     processTextWord: String? = null,
     onProcessTextConsumed: () -> Unit = {}
 ) {
-    var splashVisible by remember { mutableStateOf(true) }
+    // rememberSaveable: an activity restart (rotation, or a tooling-forced relaunch)
+    // must not replay the 1.8s intro the user has already sat through.
+    var splashVisible by rememberSaveable { mutableStateOf(true) }
 
     LaunchedEffect(processTextWord) {
         if (processTextWord != null) {
@@ -74,11 +77,11 @@ fun AppNavHost(
             }
         ) {
             composable(AppDestinations.MAIN) {
-                MainScreen(
+                HomeScreen(
                     onSettingsClick = { navController.navigate(AppDestinations.SETTINGS) },
                     onWordClick = { wordId -> navController.navigate(AppDestinations.wordDetail(wordId)) },
-                    processTextWord = processTextWord,
-                    onProcessTextConsumed = onProcessTextConsumed
+                    sharedText = processTextWord,
+                    onSharedTextConsumed = onProcessTextConsumed
                 )
             }
             composable(AppDestinations.SETTINGS) {

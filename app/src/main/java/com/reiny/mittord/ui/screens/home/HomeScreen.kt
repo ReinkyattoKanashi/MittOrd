@@ -1,34 +1,25 @@
 package com.reiny.mittord.ui.screens.home
 
-import androidx.compose.foundation.BorderStroke
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import android.app.Activity
-import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,68 +28,59 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import com.reiny.mittord.domain.util.flagForCode
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.reiny.mittord.R
-import com.reiny.mittord.database.entity.SemanticObjectWithTranslations
-import com.reiny.mittord.ui.screens.home.components.AppLogoToolbar
 import com.reiny.mittord.ui.screens.home.components.AddWordState
+import com.reiny.mittord.ui.screens.home.components.AppLogoToolbar
 import com.reiny.mittord.ui.screens.home.components.BottomNavState
-import com.reiny.mittord.ui.screens.home.components.SearchState
 import com.reiny.mittord.ui.screens.home.components.EmptyListPlaceholder
-import com.reiny.mittord.ui.theme.MittOrdTheme
-import com.reiny.mittord.ui.theme.Theme
-import com.reiny.mittord.ui.theme.typography
+import com.reiny.mittord.ui.screens.home.components.SearchState
+import com.reiny.mittord.ui.screens.home.components.WordItem
 import com.reiny.mittord.util.AppConstants
+import com.reiny.mittord.util.MeasureAvailableHeight
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
-fun MainScreen(
+fun HomeScreen(
     onSettingsClick: () -> Unit,
     onWordClick: (Long) -> Unit,
-    processTextWord: String? = null,
-    onProcessTextConsumed: () -> Unit = {},
+    sharedText: String? = null,
+    onSharedTextConsumed: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val words by viewModel.filteredWords.collectAsState()
-    val wordInput by viewModel.wordInput.collectAsState()
-    val translationInput by viewModel.translationInput.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val wordLanguageCode by viewModel.wordLanguageCode.collectAsState()
-    val wordLanguageIsAuto by viewModel.wordLanguageIsAuto.collectAsState()
-    val translationLanguageCode by viewModel.translationLanguageCode.collectAsState()
-    val translationLanguageIsAuto by viewModel.translationLanguageIsAuto.collectAsState()
-    val isTranslatingTranslation by viewModel.isTranslatingTranslation.collectAsState()
+    val words by viewModel.words.collectAsState()
+    val nav by viewModel.nav.collectAsState()
+    val addWord by viewModel.addWord.collectAsState()
     val orderedLanguages by viewModel.orderedLanguages.collectAsState()
-    var state by remember { mutableStateOf(BottomNavState.Default) }
-    val listState = rememberLazyListState()
 
+    val listState = rememberLazyListState()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    val activity = LocalActivity.current
+
+    // Subscriptions come first: the flows have no replay, so anything emitted
+    // before a collector is attached would be lost.
     LaunchedEffect(Unit) {
-        viewModel.scrollToTop.collect {
+        viewModel.scrollToWord.collect { id ->
+            // Wait for the new word to reach the list: LazyColumn keeps its position
+            // anchored to the previously first key, so scrolling before the insert
+            // lands would leave the new item just above the viewport.
+            withTimeoutOrNull(AppConstants.SCROLL_TO_NEW_WORD_TIMEOUT_MS) {
+                snapshotFlow { words.words.firstOrNull()?.id }.first { it == id }
+            }
             listState.animateScrollToItem(0)
         }
     }
 
-    LaunchedEffect(processTextWord) {
-        if (processTextWord != null) {
-            viewModel.setExternalWord(processTextWord)
-            state = BottomNavState.AddWord
-            onProcessTextConsumed()
-        }
-    }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val context = LocalContext.current
-    var lastBackMs by remember { mutableLongStateOf(0L) }
-    val exitMessage = stringResource(R.string.exit_press_again)
     val errorTranslationFailed = stringResource(R.string.error_translation_failed)
-
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -108,22 +90,27 @@ fun MainScreen(
         }
     }
 
+    LaunchedEffect(sharedText) {
+        if (sharedText != null) {
+            viewModel.onSharedText(sharedText)
+            onSharedTextConsumed()
+        }
+    }
+
+    LaunchedEffect(nav.state) {
+        if (nav.state == BottomNavState.Default) keyboardController?.hide()
+    }
+
+    var lastBackMs by remember { mutableLongStateOf(0L) }
+    val exitMessage = stringResource(R.string.exit_press_again)
     BackHandler {
-        when (state) {
-            BottomNavState.Search, BottomNavState.AddWord -> {
-                keyboardController?.hide()
-                viewModel.clearInputs()
-                viewModel.clearSearch()
-                state = BottomNavState.Default
-            }
-            BottomNavState.Default -> {
-                val now = System.currentTimeMillis()
-                if (now - lastBackMs < AppConstants.BACK_PRESS_TIMEOUT_MS) {
-                    (context as? Activity)?.finish()
-                } else {
-                    lastBackMs = now
-                    Toast.makeText(context, exitMessage, Toast.LENGTH_SHORT).show()
-                }
+        if (!viewModel.onBackPressed()) {
+            val now = System.currentTimeMillis()
+            if (now - lastBackMs < AppConstants.BACK_PRESS_TIMEOUT_MS) {
+                activity?.finish()
+            } else {
+                lastBackMs = now
+                Toast.makeText(context, exitMessage, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -147,77 +134,59 @@ fun MainScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-                .then(if (state == BottomNavState.Search) Modifier.imePadding() else Modifier)
+                .then(if (nav.state == BottomNavState.Search) Modifier.imePadding() else Modifier)
                 .fillMaxSize()
         ) {
-            if (words.isEmpty()) {
-                EmptyListPlaceholder(
+            // parentHeight is the AddWord expansion target, so it must be the height
+            // measured without the keyboard. In Search the box carries imePadding(),
+            // and following it would rewrite this state on every frame of the IME
+            // animation, recomposing the whole box along with the navigation bar.
+            var targetHeight by remember { mutableStateOf(0.dp) }
+            val trackHeight = nav.state != BottomNavState.Search
+            MeasureAvailableHeight(fraction = 1f) { height ->
+                if (trackHeight) targetHeight = height
+            }
+
+            when {
+                words.isLoading -> Unit
+
+                words.words.isEmpty() -> EmptyListPlaceholder(
                     modifier = Modifier.align(Alignment.Center),
-                    isFiltered = searchQuery.isNotBlank()
+                    isFiltered = words.isFiltered
                 )
-            } else {
-                LazyColumn(
+
+                else -> LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 120.dp
-                    )
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp)
                 ) {
-                    items(words, key = { it.semanticObject.id }) { item ->
-                        WordItem(item = item, onClick = { onWordClick(item.semanticObject.id) })
+                    items(words.words, key = { it.id }) { item ->
+                        WordItem(item = item, onClick = { onWordClick(item.id) })
                     }
                 }
             }
 
-            var targetHeight by remember { mutableStateOf(0.dp) }
-            MeasureAvailableHeight(fraction = 1f) { height ->
-                targetHeight = height
-            }
             FloatingBottomNavigationDefault(
-                state = state,
-                onLeftClick = {
-                    if (state == BottomNavState.Default) {
-                        state = BottomNavState.Search
-                    }
-                },
-                onMiddleClick = {
-                    state = when (state) {
-                        BottomNavState.Search -> {
-                            keyboardController?.hide()
-                            viewModel.clearSearch()
-                            BottomNavState.Default
-                        }
-                        BottomNavState.Default -> BottomNavState.AddWord
-                        BottomNavState.AddWord -> {
-                            keyboardController?.hide()
-                            viewModel.clearInputs()
-                            BottomNavState.Default
-                        }
-                    }
-                },
-                onRightClick = { onSettingsClick() },
+                state = nav.state,
+                onLeftClick = viewModel::onSearchClick,
+                onMiddleClick = viewModel::onCenterClick,
+                onRightClick = onSettingsClick,
                 addWord = AddWordState(
-                    wordInput = wordInput,
-                    translationInput = translationInput,
-                    wordLanguageCode = wordLanguageCode,
-                    translationLanguageCode = translationLanguageCode,
-                    wordLanguageIsAuto = wordLanguageIsAuto,
-                    translationLanguageIsAuto = translationLanguageIsAuto,
-                    isTranslating = isTranslatingTranslation,
+                    wordInput = addWord.word,
+                    translationInput = addWord.translation,
+                    wordLanguageCode = addWord.wordLanguageCode,
+                    translationLanguageCode = addWord.translationLanguageCode,
+                    wordLanguageIsAuto = addWord.wordLanguageIsAuto,
+                    translationLanguageIsAuto = addWord.translationLanguageIsAuto,
+                    isTranslating = addWord.isTranslating,
                     onWordChange = viewModel::onWordChange,
                     onTranslationChange = viewModel::onTranslationChange,
                     onWordLanguageSelected = viewModel::onWordLanguageSelected,
                     onTranslationLanguageSelected = viewModel::onTranslationLanguageSelected,
                     onTranslateTranslation = viewModel::translateTranslation,
-                    onAddWord = {
-                        viewModel.addWord()
-                        keyboardController?.hide()
-                        state = BottomNavState.Default
-                    }
+                    onAddWord = viewModel::addWord
                 ),
                 search = SearchState(
-                    query = searchQuery,
+                    query = nav.searchQuery,
                     onQueryChange = viewModel::onSearchChange,
                     onClear = viewModel::clearSearch
                 ),
@@ -227,58 +196,5 @@ fun MainScreen(
                 parentHeight = targetHeight
             )
         }
-    }
-}
-
-@Composable
-private fun WordItem(item: SemanticObjectWithTranslations, onClick: () -> Unit) {
-    val translation = item.translations.firstOrNull()?.text.orEmpty()
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    val flag = flagForCode(item.semanticObject.wordLanguageCode)
-
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 5.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = flag ?: AppConstants.DEFAULT_FLAG_EMOJI,
-                style = Theme.typography.h2,
-                modifier = Modifier.padding(end = 10.dp),
-                color = if (flag == null) onSurface.copy(alpha = 0.25f) else Color.Unspecified
-            )
-            Column {
-                Text(
-                    text = item.semanticObject.baseWord,
-                    style = Theme.typography.h2,
-                    color = onSurface
-                )
-                if (translation.isNotBlank()) {
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        text = translation,
-                        style = Theme.typography.caption,
-                        color = onSurface.copy(alpha = 0.55f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Preview
-@Composable
-fun PreviewScreen(modifier: Modifier = Modifier) {
-    MittOrdTheme {
-        MainScreen(onSettingsClick = {}, onWordClick = {})
     }
 }

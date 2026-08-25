@@ -31,6 +31,7 @@ object AppConstants {
     const val BACK_PRESS_TIMEOUT_MS = 2000L
     const val FOCUS_REQUEST_DELAY_MS = 80L
     const val LANG_DETECT_DEBOUNCE_MS = 600L
+    const val SCROLL_TO_NEW_WORD_TIMEOUT_MS = 1000L
 
     // Language detection
     const val LANG_DETECT_MIN_LENGTH = 2
