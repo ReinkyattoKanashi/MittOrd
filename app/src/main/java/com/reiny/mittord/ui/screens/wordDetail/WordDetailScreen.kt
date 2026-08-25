@@ -1,6 +1,7 @@
 package com.reiny.mittord.ui.screens.wordDetail
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -58,12 +59,13 @@ import com.reiny.mittord.ui.screens.home.components.LanguageFlagButton
 import com.reiny.mittord.ui.screens.home.components.RoundedPrimaryButton
 import com.reiny.mittord.ui.screens.home.components.TranslateButton
 import com.reiny.mittord.ui.screens.home.components.WordInputField
-import com.reiny.mittord.domain.util.LANG_NAME_TO_BCP47
+import com.reiny.mittord.domain.util.bcp47
 import com.reiny.mittord.domain.util.langNameForCode
 import com.reiny.mittord.ui.screens.settings.LanguagePickerSheet
 import com.reiny.mittord.ui.theme.Theme
 import com.reiny.mittord.ui.theme.typography
 import com.reiny.mittord.util.AppConstants
+import kotlinx.coroutines.delay
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,9 +78,7 @@ fun WordDetailScreen(
     val orderedLanguages by viewModel.orderedLanguages.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var showWordLanguagePicker by remember { mutableStateOf(false) }
-    var translationPickerIndex by remember { mutableStateOf<Int?>(null) }
-    var translatePickerIndex by remember { mutableStateOf<Int?>(null) }
+    var picker by remember { mutableStateOf<PickerRequest?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -88,25 +88,29 @@ fun WordDetailScreen(
 
     BackHandler(onBack = handleBack)
 
-    val translationFocusRequesters = remember { mutableListOf<FocusRequester>() }
-    val neededSize = state.translations.size
-    while (translationFocusRequesters.size < neededSize) translationFocusRequesters.add(FocusRequester())
-    while (translationFocusRequesters.size > neededSize) translationFocusRequesters.removeAt(translationFocusRequesters.lastIndex)
+    // Deliberately a stable map: the focus effect below is keyed on Unit, so it has to
+    // reach requesters created long after it started.
+    val translationFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
 
     LaunchedEffect(Unit) {
         viewModel.focusTranslation.collect { index ->
-            kotlinx.coroutines.delay(AppConstants.FOCUS_REQUEST_DELAY_MS)
-            try { translationFocusRequesters.getOrNull(index)?.requestFocus() } catch (_: Exception) {}
+            delay(AppConstants.FOCUS_REQUEST_DELAY_MS)
+            // The row can be gone again before the delay is over.
+            runCatching { translationFocusRequesters[index]?.requestFocus() }
         }
     }
 
     val errorTranslationFailed = stringResource(R.string.error_translation_failed)
+    val errorImageSaveFailed = stringResource(R.string.error_image_save_failed)
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
                 WordDetailEvent.Saved, WordDetailEvent.Deleted -> onBack()
                 WordDetailEvent.TranslationFailed ->
                     snackbarHostState.showSnackbar(errorTranslationFailed)
+
+                WordDetailEvent.ImageSaveFailed ->
+                    snackbarHostState.showSnackbar(errorImageSaveFailed)
             }
         }
     }
@@ -127,9 +131,6 @@ fun WordDetailScreen(
     val cdWordPhoto = stringResource(R.string.cd_word_photo)
     val cdRemovePhoto = stringResource(R.string.cd_remove_photo)
     val btnSave = stringResource(R.string.btn_save)
-    val pickerWordLanguage = stringResource(R.string.picker_word_language)
-    val pickerTranslationLanguage = stringResource(R.string.picker_translation_language)
-    val pickerTranslateInto = stringResource(R.string.picker_translate_into)
     val dialogTitle = stringResource(R.string.dialog_unsaved_title)
     val dialogMessage = stringResource(R.string.dialog_unsaved_message)
     val dialogSave = stringResource(R.string.btn_save)
@@ -193,7 +194,7 @@ fun WordDetailScreen(
                 LanguageFlagButton(
                     languageCode = state.wordLanguageCode,
                     isAuto = state.wordLanguageIsAuto,
-                    onClick = { showWordLanguagePicker = true }
+                    onClick = { picker = PickerRequest.WordLanguage }
                 )
                 Spacer(Modifier.width(8.dp))
                 WordInputField(
@@ -216,20 +217,21 @@ fun WordDetailScreen(
                     LanguageFlagButton(
                         languageCode = entry.languageCode,
                         isAuto = entry.isAuto,
-                        onClick = { translationPickerIndex = i }
+                        onClick = { picker = PickerRequest.TranslationLanguage(i) }
                     )
                     Spacer(Modifier.width(8.dp))
                     WordInputField(
-                        modifier = Modifier.weight(1f).let { m ->
-                            translationFocusRequesters.getOrNull(i)
-                                ?.let { m.focusRequester(it) } ?: m
-                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(
+                                translationFocusRequesters.getOrPut(i) { FocusRequester() }
+                            ),
                         value = entry.text,
                         onValueChange = { viewModel.onTranslationChange(i, it) },
                         placeholder = placeholderTranslation
                     )
                     TranslateButton(
-                        onClick = { translatePickerIndex = i },
+                        onClick = { picker = PickerRequest.TranslateInto(i) },
                         isLoading = entry.isTranslating
                     )
                     if (state.translations.size > 1) {
@@ -305,9 +307,10 @@ fun WordDetailScreen(
                     )
                 }
             } else {
+                val imagePath = state.imagePath
                 Box(modifier = Modifier.fillMaxWidth()) {
                     AsyncImage(
-                        model = File(state.imagePath!!),
+                        model = File(imagePath),
                         contentDescription = cdWordPhoto,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -408,66 +411,68 @@ fun WordDetailScreen(
         )
     }
 
-    // Language picker for word field
-    if (showWordLanguagePicker) {
+    picker?.let { request ->
+        val index = when (request) {
+            PickerRequest.WordLanguage -> null
+            is PickerRequest.TranslationLanguage -> request.index
+            is PickerRequest.TranslateInto -> request.index
+        }
+        val entry = index?.let { state.translations.getOrNull(it) }
+        if (index != null && entry == null) {
+            picker = null
+            return@let
+        }
         LanguagePickerSheet(
-            title = pickerWordLanguage,
-            selected = langNameForCode(state.wordLanguageCode) ?: "",
-            isAutoSelected = state.wordLanguageIsAuto,
-            showAutoOption = true,
+            title = stringResource(request.titleRes),
+            selected = langNameForCode(
+                if (request is PickerRequest.WordLanguage) state.wordLanguageCode
+                else entry?.languageCode
+            ).orEmpty(),
+            isAutoSelected = when (request) {
+                PickerRequest.WordLanguage -> state.wordLanguageIsAuto
+                is PickerRequest.TranslationLanguage -> entry?.isAuto == true
+                is PickerRequest.TranslateInto -> false
+            },
+            showAutoOption = request !is PickerRequest.TranslateInto,
             orderedLanguages = orderedLanguages,
             onSelect = { language ->
                 language?.let { viewModel.addRecentLanguage(it.name) }
-                val code = language?.code?.takeIf { it.isNotEmpty() }
-                    ?: language?.let { LANG_NAME_TO_BCP47[it.name] }
-                viewModel.onWordLanguageSelected(code)
-                showWordLanguagePicker = false
-            },
-            onDismiss = { showWordLanguagePicker = false }
-        )
-    }
+                when (request) {
+                    // null means "auto detect" here
+                    PickerRequest.WordLanguage ->
+                        viewModel.onWordLanguageSelected(language?.bcp47())
 
-    // Language picker for translation field (detect language)
-    translationPickerIndex?.let { idx ->
-        val entry = state.translations.getOrNull(idx)
-        if (entry != null) {
-            LanguagePickerSheet(
-                title = pickerTranslationLanguage,
-                selected = langNameForCode(entry.languageCode) ?: "",
-                isAutoSelected = entry.isAuto,
-                showAutoOption = true,
-                orderedLanguages = orderedLanguages,
-                onSelect = { language ->
-                    language?.let { viewModel.addRecentLanguage(it.name) }
-                    val code = language?.code?.takeIf { it.isNotEmpty() }
-                        ?: language?.let { LANG_NAME_TO_BCP47[it.name] }
-                    viewModel.onTranslationLanguageSelected(idx, code)
-                    translationPickerIndex = null
-                },
-                onDismiss = { translationPickerIndex = null }
-            )
-        }
-    }
+                    is PickerRequest.TranslationLanguage ->
+                        viewModel.onTranslationLanguageSelected(request.index, language?.bcp47())
 
-    // Translate picker: select target language → auto-translate
-    translatePickerIndex?.let { idx ->
-        LanguagePickerSheet(
-            title = pickerTranslateInto,
-            selected = langNameForCode(state.translations.getOrNull(idx)?.languageCode) ?: "",
-            isAutoSelected = false,
-            showAutoOption = false,
-            orderedLanguages = orderedLanguages,
-            onSelect = { language ->
-                if (language != null) {
-                    viewModel.addRecentLanguage(language.name)
-                    val code = language.code.takeIf { it.isNotEmpty() }
-                        ?: LANG_NAME_TO_BCP47[language.name]
-                        ?: language.name
-                    viewModel.translateTranslation(idx, code)
+                    // the API needs some target, so fall back to the plain name
+                    is PickerRequest.TranslateInto ->
+                        language?.let {
+                            viewModel.translateTranslation(request.index, it.bcp47() ?: it.name)
+                        }
                 }
-                translatePickerIndex = null
+                picker = null
             },
-            onDismiss = { translatePickerIndex = null }
+            onDismiss = { picker = null }
         )
+    }
+}
+
+/** Which language picker the editor is showing, if any. */
+private sealed interface PickerRequest {
+    @get:StringRes
+    val titleRes: Int
+
+    data object WordLanguage : PickerRequest {
+        override val titleRes = R.string.picker_word_language
+    }
+
+    data class TranslationLanguage(val index: Int) : PickerRequest {
+        override val titleRes = R.string.picker_translation_language
+    }
+
+    /** Not a language choice but a target: picking one translates the word into it. */
+    data class TranslateInto(val index: Int) : PickerRequest {
+        override val titleRes = R.string.picker_translate_into
     }
 }

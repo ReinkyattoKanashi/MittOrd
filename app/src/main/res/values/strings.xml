@@ -65,6 +65,7 @@
     <string name="cd_delete_avatar">Delete avatar</string>
     <string name="auto_detect">Auto-detect</string>
     <string name="error_translation_failed">Translation failed. Check your connection.</string>
+    <string name="error_image_save_failed">Could not save the photo.</string>
     <string name="profile_name">Learner</string>
     <string name="profile_subtitle">Vocabulary learner</string>
 </resources>

@@ -10,14 +10,12 @@ import com.reiny.mittord.domain.usecase.GetOrderedLanguagesUseCase
 import com.reiny.mittord.domain.usecase.SeedDatabaseUseCase
 import com.reiny.mittord.domain.usecase.TranslateTextUseCase
 import com.reiny.mittord.domain.util.LANG_NAME_TO_BCP47
+import com.reiny.mittord.domain.util.LanguageDetector
 import com.reiny.mittord.domain.util.flagForCode
 import com.reiny.mittord.domain.util.normalizeCode
 import com.reiny.mittord.ui.screens.home.components.BottomNavState
-import com.reiny.mittord.util.AppConstants
 import com.reiny.mittord.util.AppPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +27,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val WORD_FIELD = "word"
+private const val TRANSLATION_FIELD = "translation"
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -73,8 +74,7 @@ class HomeViewModel @Inject constructor(
     private val _events = MutableSharedFlow<HomeEvent>(extraBufferCapacity = 1)
     val events = _events.asSharedFlow()
 
-    private var detectWordJob: Job? = null
-    private var detectTranslationJob: Job? = null
+    private val detector = LanguageDetector(viewModelScope, detectLanguageUseCase)
 
     init {
         seedIfEmpty()
@@ -124,49 +124,35 @@ class HomeViewModel @Inject constructor(
     fun onWordChange(value: String) {
         _addWord.update { it.copy(word = value) }
         if (!_addWord.value.wordLanguageIsAuto) return
-        detectWordJob = detectLanguage(value, debounce = true, previous = detectWordJob) { code ->
-            _addWord.update { it.copy(wordLanguageCode = code) }
-        }
+        detectWord(value, debounce = true)
     }
 
     fun onTranslationChange(value: String) {
         _addWord.update { it.copy(translation = value) }
         if (!_addWord.value.translationLanguageIsAuto) return
-        detectTranslationJob =
-            detectLanguage(value, debounce = true, previous = detectTranslationJob) { code ->
-                _addWord.update { it.copy(translationLanguageCode = code) }
-            }
+        detectTranslation(value, debounce = true)
     }
 
     fun onWordLanguageSelected(code: String?) {
         if (code != null) {
-            detectWordJob?.cancel()
+            detector.cancel(WORD_FIELD)
             _addWord.update { it.copy(wordLanguageCode = code, wordLanguageIsAuto = false) }
             return
         }
         _addWord.update { it.copy(wordLanguageIsAuto = true) }
-        detectWordJob =
-            detectLanguage(_addWord.value.word, debounce = false, previous = detectWordJob) { detected ->
-                _addWord.update { it.copy(wordLanguageCode = detected) }
-            }
+        detectWord(_addWord.value.word, debounce = false)
     }
 
     fun onTranslationLanguageSelected(code: String?) {
         if (code != null) {
-            detectTranslationJob?.cancel()
+            detector.cancel(TRANSLATION_FIELD)
             _addWord.update {
                 it.copy(translationLanguageCode = code, translationLanguageIsAuto = false)
             }
             return
         }
         _addWord.update { it.copy(translationLanguageIsAuto = true) }
-        detectTranslationJob = detectLanguage(
-            _addWord.value.translation,
-            debounce = false,
-            previous = detectTranslationJob
-        ) { detected ->
-            _addWord.update { it.copy(translationLanguageCode = detected) }
-        }
+        detectTranslation(_addWord.value.translation, debounce = false)
     }
 
     fun translateTranslation(targetCode: String) {
@@ -191,9 +177,7 @@ class HomeViewModel @Inject constructor(
     fun onSharedText(text: String) {
         _addWord.value = AddWordUiState(word = text)
         _navState.value = BottomNavState.AddWord
-        detectWordJob = detectLanguage(text, debounce = false, previous = detectWordJob) { code ->
-            _addWord.update { it.copy(wordLanguageCode = code) }
-        }
+        detectWord(text, debounce = false)
     }
 
     fun addWord() {
@@ -216,31 +200,22 @@ class HomeViewModel @Inject constructor(
 
     // ---------- internals ----------
 
-    /**
-     * Cancels [previous], then detects the language of [text] and reports it to [onResult].
-     * Text shorter than the minimum reports null right away and starts no job.
-     */
-    private fun detectLanguage(
-        text: String,
-        debounce: Boolean,
-        previous: Job?,
-        onResult: (String?) -> Unit
-    ): Job? {
-        previous?.cancel()
-        val trimmed = text.trim()
-        if (trimmed.length < AppConstants.LANG_DETECT_MIN_LENGTH) {
-            onResult(null)
-            return null
+    // Unlike the editor, an empty or unrecognised field clears the flag here: the
+    // form is filling in a new word, so there is nothing to fall back to.
+    private fun detectWord(text: String, debounce: Boolean) {
+        detector.request(WORD_FIELD, text, debounce) { code ->
+            _addWord.update { it.copy(wordLanguageCode = code) }
         }
-        return viewModelScope.launch {
-            if (debounce) delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
-            onResult(detectLanguageUseCase(trimmed))
+    }
+
+    private fun detectTranslation(text: String, debounce: Boolean) {
+        detector.request(TRANSLATION_FIELD, text, debounce) { code ->
+            _addWord.update { it.copy(translationLanguageCode = code) }
         }
     }
 
     private fun resetAddWord() {
-        detectWordJob?.cancel()
-        detectTranslationJob?.cancel()
+        detector.cancelAll()
         _addWord.value = AddWordUiState()
     }
 

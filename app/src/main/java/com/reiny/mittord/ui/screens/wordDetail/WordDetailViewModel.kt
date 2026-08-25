@@ -7,22 +7,21 @@ import androidx.lifecycle.viewModelScope
 import com.reiny.mittord.database.DictionaryRepository
 import com.reiny.mittord.database.TranslationData
 import com.reiny.mittord.database.WordUpdate
+import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.domain.usecase.DetectLanguageUseCase
 import com.reiny.mittord.domain.usecase.GetOrderedLanguagesUseCase
 import com.reiny.mittord.domain.usecase.TranslateTextUseCase
-import com.reiny.mittord.domain.model.Language
-import com.reiny.mittord.util.AppConstants
+import com.reiny.mittord.domain.util.LanguageDetector
 import com.reiny.mittord.util.AppPreferences
 import com.reiny.mittord.util.WordImageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -47,21 +46,24 @@ data class WordDetailState(
     val isLoading: Boolean = true
 )
 
+/** Detection key for the base word; translations are keyed by their index. */
+private const val WORD_FIELD = "word"
+
 @HiltViewModel
 class WordDetailViewModel @Inject constructor(
     private val repository: DictionaryRepository,
     private val appPrefs: AppPreferences,
     private val wordImageRepo: WordImageRepository,
-    private val detectLanguageUseCase: DetectLanguageUseCase,
     private val translateTextUseCase: TranslateTextUseCase,
     private val getOrderedLanguagesUseCase: GetOrderedLanguagesUseCase,
+    detectLanguageUseCase: DetectLanguageUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val wordId: Long = checkNotNull(savedStateHandle["wordId"])
 
     private val _state = MutableStateFlow(WordDetailState())
-    val state: StateFlow<WordDetailState> = _state
+    val state: StateFlow<WordDetailState> = _state.asStateFlow()
 
     private val _focusTranslation = MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val focusTranslation = _focusTranslation.asSharedFlow()
@@ -72,30 +74,29 @@ class WordDetailViewModel @Inject constructor(
     private val _orderedLanguages = MutableStateFlow(appPrefs.orderedLanguages())
     val orderedLanguages: StateFlow<List<Language>> = _orderedLanguages.asStateFlow()
 
-    private var detectWordJob: Job? = null
-    private val detectTranslationJobs = mutableMapOf<Int, Job>()
+    private val detector = LanguageDetector(viewModelScope, detectLanguageUseCase)
 
-    private var originalWord = ""
-    private var originalTranslations = listOf<TranslationEntry>()
-    private var originalComment = ""
-    private var originalImagePath: String? = null
-    private var originalWordLanguageCode: String? = null
+    private var original = WordDetailState()
 
+    /**
+     * Detection may answer null for text it cannot place. Unlike the add-word form, an
+     * existing word keeps the language it was saved with instead of losing the flag.
+     */
     val hasUnsavedChanges: Boolean
         get() {
-            val s = _state.value
-            if (s.isLoading) return false
-            return s.word.trim() != originalWord ||
-                s.comment.trim() != originalComment ||
-                s.imagePath != originalImagePath ||
-                s.wordLanguageCode != originalWordLanguageCode ||
-                translationsChanged(s.translations)
+            val current = _state.value
+            if (current.isLoading) return false
+            return current.word.trim() != original.word ||
+                current.comment.trim() != original.comment ||
+                current.imagePath != original.imagePath ||
+                current.wordLanguageCode != original.wordLanguageCode ||
+                translationsChanged(current.translations)
         }
 
     private fun translationsChanged(current: List<TranslationEntry>): Boolean {
-        if (current.size != originalTranslations.size) return true
-        return current.zip(originalTranslations).any { (cur, orig) ->
-            cur.text.trim() != orig.text.trim() || cur.languageCode != orig.languageCode
+        if (current.size != original.translations.size) return true
+        return current.zip(original.translations).any { (now, before) ->
+            now.text.trim() != before.text.trim() || now.languageCode != before.languageCode
         }
     }
 
@@ -106,165 +107,140 @@ class WordDetailViewModel @Inject constructor(
         }
     }
 
+    // ---------- base word ----------
+
     fun onWordChange(value: String) {
-        _state.value = _state.value.copy(word = value)
+        _state.update { it.copy(word = value) }
         if (!_state.value.wordLanguageIsAuto) return
-        detectWordJob?.cancel()
-        val trimmed = value.trim()
-        if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
-            detectWordJob = viewModelScope.launch {
-                delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
-                val code = detectLanguageUseCase(trimmed)
-                if (code != null) _state.value = _state.value.copy(wordLanguageCode = code)
-            }
-        }
+        detectWord(value, debounce = true)
     }
 
     fun onWordLanguageSelected(code: String?) {
-        detectWordJob?.cancel()
-        if (code == null) {
-            _state.value = _state.value.copy(wordLanguageIsAuto = true)
-            val trimmed = _state.value.word.trim()
-            if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
-                detectWordJob = viewModelScope.launch {
-                    val detected = detectLanguageUseCase(trimmed)
-                    if (detected != null) _state.value = _state.value.copy(wordLanguageCode = detected)
-                }
-            }
-        } else {
-            _state.value = _state.value.copy(wordLanguageCode = code, wordLanguageIsAuto = false)
+        if (code != null) {
+            detector.cancel(WORD_FIELD)
+            _state.update { it.copy(wordLanguageCode = code, wordLanguageIsAuto = false) }
+            return
+        }
+        _state.update { it.copy(wordLanguageIsAuto = true) }
+        detectWord(_state.value.word, debounce = false)
+    }
+
+    private fun detectWord(text: String, debounce: Boolean) {
+        detector.request(WORD_FIELD, text, debounce) { code ->
+            if (code != null) _state.update { it.copy(wordLanguageCode = code) }
         }
     }
 
+    // ---------- translations ----------
+
     fun onTranslationChange(index: Int, value: String) {
-        val translations = _state.value.translations.toMutableList()
-        if (index !in translations.indices) return
-        val entry = translations[index]
-        translations[index] = entry.copy(text = value)
-        _state.value = _state.value.copy(translations = translations)
+        val entry = _state.value.translations.getOrNull(index) ?: return
+        updateTranslation(index) { it.copy(text = value) }
         if (!entry.isAuto) return
-        detectTranslationJobs[index]?.cancel()
-        val trimmed = value.trim()
-        if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
-            detectTranslationJobs[index] = viewModelScope.launch {
-                delay(AppConstants.LANG_DETECT_DEBOUNCE_MS)
-                val code = detectLanguageUseCase(trimmed)
-                if (code != null) {
-                    val current = _state.value.translations.toMutableList()
-                    if (index in current.indices) {
-                        current[index] = current[index].copy(languageCode = code)
-                        _state.value = _state.value.copy(translations = current)
-                    }
-                }
-                detectTranslationJobs.remove(index)
-            }
-        }
+        detectTranslation(index, value, debounce = true)
     }
 
     fun onTranslationLanguageSelected(index: Int, code: String?) {
-        detectTranslationJobs[index]?.cancel()
-        detectTranslationJobs.remove(index)
-        val translations = _state.value.translations.toMutableList()
-        if (index !in translations.indices) return
-        if (code == null) {
-            translations[index] = translations[index].copy(isAuto = true)
-            _state.value = _state.value.copy(translations = translations)
-            val trimmed = translations[index].text.trim()
-            if (trimmed.length >= AppConstants.LANG_DETECT_MIN_LENGTH) {
-                detectTranslationJobs[index] = viewModelScope.launch {
-                    val detected = detectLanguageUseCase(trimmed)
-                    if (detected != null) {
-                        val current = _state.value.translations.toMutableList()
-                        if (index in current.indices) {
-                            current[index] = current[index].copy(languageCode = detected)
-                            _state.value = _state.value.copy(translations = current)
-                        }
-                    }
-                    detectTranslationJobs.remove(index)
-                }
-            }
-        } else {
-            translations[index] = translations[index].copy(languageCode = code, isAuto = false)
-            _state.value = _state.value.copy(translations = translations)
+        if (index !in _state.value.translations.indices) return
+        if (code != null) {
+            detector.cancel(index)
+            updateTranslation(index) { it.copy(languageCode = code, isAuto = false) }
+            return
+        }
+        updateTranslation(index) { it.copy(isAuto = true) }
+        detectTranslation(index, _state.value.translations[index].text, debounce = false)
+    }
+
+    private fun detectTranslation(index: Int, text: String, debounce: Boolean) {
+        detector.request(index, text, debounce) { code ->
+            if (code != null) updateTranslation(index) { it.copy(languageCode = code) }
         }
     }
 
     fun translateTranslation(index: Int, targetCode: String) {
         val sourceText = _state.value.word.trim()
-        if (sourceText.isBlank()) return
-        val translations = _state.value.translations.toMutableList()
-        if (index !in translations.indices) return
-        translations[index] = translations[index].copy(isTranslating = true)
-        _state.value = _state.value.copy(translations = translations)
+        if (sourceText.isBlank() || index !in _state.value.translations.indices) return
+        updateTranslation(index) { it.copy(isTranslating = true) }
         viewModelScope.launch {
             val result = translateTextUseCase(sourceText, targetCode)
-            val current = _state.value.translations.toMutableList()
-            if (index in current.indices) {
-                current[index] = current[index].copy(
-                    text = result.getOrNull() ?: current[index].text,
+            updateTranslation(index) {
+                it.copy(
+                    text = result.getOrNull() ?: it.text,
                     languageCode = targetCode,
                     isAuto = false,
                     isTranslating = false
                 )
-                _state.value = _state.value.copy(translations = current)
             }
             if (result.isFailure) _events.tryEmit(WordDetailEvent.TranslationFailed)
         }
     }
 
-    fun addRecentLanguage(name: String) = appPrefs.addRecentLanguage(name)
-
     fun addTranslation() {
-        val translations = _state.value.translations.toMutableList()
-        translations.add(TranslationEntry())
-        _state.value = _state.value.copy(translations = translations)
-        _focusTranslation.tryEmit(translations.lastIndex)
+        _state.update { it.copy(translations = it.translations + TranslationEntry()) }
+        _focusTranslation.tryEmit(_state.value.translations.lastIndex)
     }
 
     fun removeTranslation(index: Int) {
-        if (_state.value.translations.size <= 1) return
-        val translations = _state.value.translations.toMutableList()
-        if (index !in translations.indices) return
-        detectTranslationJobs[index]?.cancel()
-        detectTranslationJobs.remove(index)
-        translations.removeAt(index)
-        _state.value = _state.value.copy(translations = translations)
+        val translations = _state.value.translations
+        if (translations.size <= 1 || index !in translations.indices) return
+        detector.cancel(index)
+        _state.update { it.copy(translations = it.translations.filterIndexed { i, _ -> i != index }) }
     }
 
+    /** Applies [transform] to one entry, ignoring indices that no longer exist. */
+    private fun updateTranslation(index: Int, transform: (TranslationEntry) -> TranslationEntry) {
+        _state.update { current ->
+            if (index !in current.translations.indices) return@update current
+            val updated = current.translations.toMutableList()
+            updated[index] = transform(updated[index])
+            current.copy(translations = updated)
+        }
+    }
+
+    // ---------- comment, image ----------
+
     fun onCommentChange(value: String) {
-        _state.value = _state.value.copy(comment = value)
+        _state.update { it.copy(comment = value) }
     }
 
     fun saveImage(uri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val path = wordImageRepo.save(uri, _state.value.wordId)
-                _state.value = _state.value.copy(imagePath = path)
-            } catch (_: Exception) {}
+        viewModelScope.launch {
+            val path = runCatching {
+                withContext(Dispatchers.IO) { wordImageRepo.save(uri, _state.value.wordId) }
+            }.getOrNull()
+            if (path == null) {
+                _events.tryEmit(WordDetailEvent.ImageSaveFailed)
+            } else {
+                _state.update { it.copy(imagePath = path) }
+            }
         }
     }
 
     fun removeImage() {
         val path = _state.value.imagePath ?: return
-        _state.value = _state.value.copy(imagePath = null)
-        viewModelScope.launch(Dispatchers.IO) {
-            File(path).delete()
+        _state.update { it.copy(imagePath = null) }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { File(path).delete() }
         }
     }
 
+    // ---------- persistence ----------
+
+    fun addRecentLanguage(name: String) = appPrefs.addRecentLanguage(name)
+
     fun save() {
-        val s = _state.value
+        val current = _state.value
         viewModelScope.launch {
             repository.updateWordFull(
                 id = wordId,
                 update = WordUpdate(
-                    baseWord = s.word.trim(),
-                    translations = s.translations.map {
+                    baseWord = current.word.trim(),
+                    translations = current.translations.map {
                         TranslationData(text = it.text.trim(), languageCode = it.languageCode)
                     },
-                    comment = s.comment.trim().ifBlank { null },
-                    imagePath = s.imagePath,
-                    wordLanguageCode = s.wordLanguageCode
+                    comment = current.comment.trim().ifBlank { null },
+                    imagePath = current.imagePath,
+                    wordLanguageCode = current.wordLanguageCode
                 )
             )
             _events.emit(WordDetailEvent.Saved)
@@ -283,33 +259,33 @@ class WordDetailViewModel @Inject constructor(
 
     private fun load() {
         viewModelScope.launch {
-            val item = repository.getWordWithTranslations(wordId)
-            if (item != null) {
-                val loadedTranslations = item.translations.map { t ->
+            val item = repository.getWordWithTranslations(wordId) ?: return@launch
+            // The relation has no guaranteed order; sorting by id keeps the fields from
+            // swapping places between openings, and matches the order the list uses.
+            val loaded = item.translations
+                .sortedBy { it.id }
+                .map { entry ->
                     TranslationEntry(
-                        id = t.id,
-                        text = t.text,
-                        languageCode = t.languageCode.ifBlank { null },
+                        id = entry.id,
+                        text = entry.text,
+                        languageCode = entry.languageCode.ifBlank { null },
                         isAuto = false
                     )
                 }
-                val finalTranslations = loadedTranslations.ifEmpty { listOf(TranslationEntry()) }
-                _state.value = WordDetailState(
-                    wordId = wordId,
-                    word = item.semanticObject.baseWord,
-                    wordLanguageCode = item.semanticObject.wordLanguageCode,
-                    wordLanguageIsAuto = false,
-                    translations = finalTranslations,
-                    comment = item.semanticObject.comment.orEmpty(),
-                    imagePath = item.semanticObject.imagePath,
-                    isLoading = false
-                )
-                originalWord = item.semanticObject.baseWord
-                originalTranslations = finalTranslations
-                originalComment = item.semanticObject.comment.orEmpty()
-                originalImagePath = item.semanticObject.imagePath
-                originalWordLanguageCode = item.semanticObject.wordLanguageCode
-            }
+                .ifEmpty { listOf(TranslationEntry()) }
+
+            val loadedState = WordDetailState(
+                wordId = wordId,
+                word = item.semanticObject.baseWord,
+                wordLanguageCode = item.semanticObject.wordLanguageCode,
+                wordLanguageIsAuto = false,
+                translations = loaded,
+                comment = item.semanticObject.comment.orEmpty(),
+                imagePath = item.semanticObject.imagePath,
+                isLoading = false
+            )
+            _state.value = loadedState
+            original = loadedState
         }
     }
 }
