@@ -32,3 +32,6 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Internal working notes, not part of the project
+CODE_REVIEW.md
