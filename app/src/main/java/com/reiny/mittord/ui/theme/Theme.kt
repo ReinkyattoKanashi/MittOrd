@@ -15,10 +15,10 @@ private val DarkColorScheme = darkColorScheme(
     onPrimaryContainer = Color(0xFF000000),
     background = Color(0xFF000000),
     surface = Color(0xFF121212),
-    surfaceVariant = Color(0xFFFEF7FF),
+    surfaceVariant = Color(0xFF2C2E32),
     onBackground = Color(0xFFFFFFFF),
     onSurface = Color(0xFFFFFFFF),
-    onSurfaceVariant = Color(0xFFFEF7FF),
+    onSurfaceVariant = Color(0xFFCAC4D0),
     outline = Color(0xFF2C2E32),
     outlineVariant = Color(0xFF2C2E32),
     scrim = Color(0xFF000000)
@@ -34,7 +34,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = Color(0xFFFEF7FF),
     onBackground = Color(0xFF000000),
     onSurface = Color(0xFF000000),
-    onSurfaceVariant = Color(0xFFFEF7FF),
+    onSurfaceVariant = Color(0xFF49454F),
     outline = Color(0xFFFFFFFF),
     outlineVariant = Color(0xFFD5DAE7),
     scrim = Color(0xFF000000)
@@ -48,14 +48,12 @@ fun MittOrdTheme(
     content: @Composable () -> Unit
 ) {
     val customColors = rememberMittOrdColors(darkTheme)
-    val brushes = rememberMittOrdBrushes(customColors)
     val typography = mittOrdTypography(customColors)
 
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     CompositionLocalProvider(
         LocalMittOrdColors provides customColors,
-        LocalMittOrdBrushes provides brushes,
         LocalMittOrdTypography provides typography
     ) {
         MaterialTheme(

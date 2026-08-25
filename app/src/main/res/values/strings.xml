@@ -1,4 +1,82 @@
 <resources>
     <string name="app_name">MittOrd</string>
     <string name="db_name">dictionary.db</string>
+
+    <!-- Shared -->
+    <string name="placeholder_word">Word</string>
+    <string name="placeholder_translation">Translation</string>
+    <string name="placeholder_search_language">Search…</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_add">Add</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_clear">Clear</string>
+    <string name="cd_profile">Profile</string>
+    <string name="picker_word_language">Word language</string>
+    <string name="picker_translation_language">Translation language</string>
+    <string name="picker_translate_into">Translate into…</string>
+
+    <!-- Home screen -->
+    <string name="exit_press_again">Нажмите ещё раз для выхода</string>
+
+    <!-- Floating bottom nav -->
+    <string name="nav_add_word_title">Add word</string>
+    <string name="cd_collapse">Collapse</string>
+    <string name="placeholder_search">Start typing…</string>
+
+    <!-- Empty list placeholder -->
+    <string name="empty_title">No words added</string>
+    <string name="empty_subtitle">Tap the + button to add a new word</string>
+    <string name="empty_search_title">Nothing found</string>
+    <string name="empty_search_subtitle">No words match your search</string>
+
+    <!-- Word detail screen -->
+    <string name="screen_edit_word">Edit word</string>
+    <string name="placeholder_comment">Comment…</string>
+    <string name="btn_add_translation">Add another translation</string>
+    <string name="btn_add_photo">📷  Add photo</string>
+    <string name="cd_remove_translation">Remove translation</string>
+    <string name="cd_remove_photo">Remove photo</string>
+    <string name="cd_word_photo">Word photo</string>
+    <string name="dialog_unsaved_title">Unsaved changes</string>
+    <string name="dialog_unsaved_message">Save changes before leaving?</string>
+    <string name="dialog_discard">Discard</string>
+    <string name="dialog_delete_title">Delete word?</string>
+    <string name="dialog_delete_message">This action cannot be undone.</string>
+    <string name="btn_cancel">Cancel</string>
+
+    <!-- Settings / Profile screen -->
+    <string name="screen_profile">Profile</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_dark_theme">Dark theme</string>
+    <string name="settings_languages">Languages</string>
+    <string name="settings_learning_language">Learning language</string>
+    <string name="settings_native_language">Native language</string>
+    <string name="settings_general">General</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_developer">Developer</string>
+    <string name="settings_add_mock_data">Add mock data</string>
+    <string name="mock_data_added">Mock data added</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_app_name">MittOrd</string>
+    <string name="settings_author">by KanashiReinkyatto</string>
+    <string name="settings_author_name">(Andrii Patiuk)</string>
+    <string name="settings_github_url">https://github.com/ReinkyattoKanashi</string>
+    <string name="settings_clear_words">Clear all words</string>
+    <string name="dialog_clear_words_title">Clear the dictionary?</string>
+    <string name="dialog_clear_words_message">Every word, translation and photo will be deleted. This cannot be undone.</string>
+    <string name="words_cleared">Dictionary cleared</string>
+    <string name="error_no_browser">No app can open this link.</string>
+    <string name="cd_delete_avatar">Delete avatar</string>
+    <string name="auto_detect">Auto-detect</string>
+    <string name="error_translation_failed">Translation failed. Check your connection.</string>
+    <string name="error_image_save_failed">Could not save the photo.</string>
+    <string name="error_avatar_failed">Could not update the avatar.</string>
+    <string name="crop_hint">Move and scale</string>
+    <string name="btn_cancel_crop">Cancel</string>
+    <string name="btn_done">Done</string>
+    <string name="profile_initial">L</string>
+    <string name="profile_name">Learner</string>
+    <string name="profile_subtitle">Vocabulary learner</string>
 </resources>

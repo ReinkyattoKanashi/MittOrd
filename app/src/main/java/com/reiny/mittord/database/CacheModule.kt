@@ -18,7 +18,7 @@ interface CacheModule {
                 applicationContext,
                 DictionaryDatabase::class.java,
                 applicationContext.getString(R.string.db_name)
-            ).build()
+            ).addMigrations(MIGRATION_1_2).build()
         }
 
         override fun dao() = database.dao()

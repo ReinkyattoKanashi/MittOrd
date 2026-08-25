@@ -1,21 +1,37 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# R8 configuration for MittOrd.
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Room, Hilt/Dagger, OkHttp and Coil ship their own consumer rules, so only the
+# parts R8 cannot infer on its own are listed here.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep line numbers in crash reports while hiding the original file names.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ---------------------------------------------------------------------------
+# Retrofit + Gson
+# ---------------------------------------------------------------------------
+# Generic signatures are erased by default; Retrofit reads the return type of
+# every suspend function and Gson reads Map<String, String> reflectively, so
+# both break silently without this.
+-keepattributes Signature
+-keepattributes InnerClasses,EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations,RuntimeVisibleParameterAnnotations
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# The API declaration is only ever referenced through a dynamic proxy.
+-keep,allowobfuscation interface com.reiny.mittord.data.api.TranslateApiService
+
+# Gson instantiates these by reflection and matches fields to @SerializedName,
+# so the fields themselves must survive shrinking.
+-keep class com.reiny.mittord.data.model.** { *; }
+
+# Retrofit's own reflection points.
+-keep,allowobfuscation,allowshrinking interface retrofit2.Call
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
+
+# ---------------------------------------------------------------------------
+# Room
+# ---------------------------------------------------------------------------
+# Entities are constructed by generated code, but the column names have to keep
+# matching the schema, so field names must not be renamed.
+-keepclassmembers class com.reiny.mittord.database.entity.** { <fields>; }

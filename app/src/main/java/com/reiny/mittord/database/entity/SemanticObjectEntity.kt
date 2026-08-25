@@ -12,4 +12,6 @@ data class SemanticObjectEntity(
     val comment: String? = null,
     val isFavorite: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
+    val imagePath: String? = null,
+    val wordLanguageCode: String? = null,
 )

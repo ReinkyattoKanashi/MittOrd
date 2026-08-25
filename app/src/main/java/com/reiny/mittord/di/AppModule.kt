@@ -1,9 +1,9 @@
 package com.reiny.mittord.di
 
 import android.content.Context
-import com.reiny.mittord.core.RunAsync
 import com.reiny.mittord.database.CacheModule
 import com.reiny.mittord.database.DictionaryRepository
+import com.reiny.mittord.database.DictionaryRepositoryImpl
 import com.reiny.mittord.database.dao.SemanticObjectDao
 import dagger.Module
 import dagger.Provides
@@ -28,8 +28,5 @@ object AppModule {
     @Provides
     @Singleton
     fun provideRepository(dao: SemanticObjectDao): DictionaryRepository =
-        DictionaryRepository.Base(dao)
-
-    @Provides
-    fun provideRunAsync(): RunAsync = RunAsync.Base()
+        DictionaryRepositoryImpl(dao)
 }

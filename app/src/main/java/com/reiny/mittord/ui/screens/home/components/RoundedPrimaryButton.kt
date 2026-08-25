@@ -1,5 +1,4 @@
 package com.reiny.mittord.ui.screens.home.components
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,16 +28,14 @@ fun RoundedPrimaryButton(
     icon: ImageVector? = null
 ) {
     Surface(
+        onClick = onClick,
+        enabled = enabled,
         shape = RoundedCornerShape(50),
         color = if (enabled) Theme.colors.primary else Theme.colors.primary.copy(alpha = 0.4f),
         shadowElevation = if (enabled) 4.dp else 0.dp,
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clickable(
-                enabled = enabled,
-                onClick = onClick
-            )
     ) {
         Row(
             modifier = Modifier

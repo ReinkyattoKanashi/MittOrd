@@ -1,92 +1,88 @@
 package com.reiny.mittord.ui.screens.home
 
-import androidx.compose.animation.Animatable
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector4D
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.offset
+import com.reiny.mittord.domain.model.LANGUAGES
+import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.ui.animations.NavBarAnimation
+import com.reiny.mittord.ui.screens.home.addword.AddWordPanel
+import com.reiny.mittord.ui.screens.home.components.AddWordState
 import com.reiny.mittord.ui.screens.home.components.BottomNavState
-import com.reiny.mittord.ui.screens.home.components.PrimaryTextField
-import com.reiny.mittord.ui.screens.home.components.RoundedPrimaryButton
-import com.reiny.mittord.ui.screens.home.components.WordInputField
+import com.reiny.mittord.ui.screens.home.components.NavCenterButton
+import com.reiny.mittord.ui.screens.home.components.NavIconsRow
+import com.reiny.mittord.ui.screens.home.components.NavSearchField
+import com.reiny.mittord.ui.screens.home.components.SearchState
 import com.reiny.mittord.ui.theme.MittOrdTheme
-import com.reiny.mittord.ui.theme.Theme
-import com.reiny.mittord.ui.theme.colors
-import com.reiny.mittord.ui.theme.typography
-import com.reiny.mittord.utils.height
-import com.reiny.mittord.utils.paddingLayout
-import com.reiny.mittord.utils.size
+import com.reiny.mittord.util.MeasureAvailableWidth
+import com.reiny.mittord.util.height
+import com.reiny.mittord.util.paddingLayout
 
+private val COLLAPSED_HEIGHT = 60.dp
+private val CENTER_BUTTON_SIZE = 70.dp
+private val PANEL_CORNER = RoundedCornerShape(30.dp)
+
+/** Share of the screen width the bar occupies. */
+private const val BAR_WIDTH_FRACTION = 0.85f
+
+/** Room the expanded panel leaves above itself for the center button to sit in. */
+private val PANEL_TOP_INSET = 35.dp
+
+/**
+ * Bottom bar with three states: plain navigation, an inline search field, and the
+ * expanded add-word panel.
+ *
+ * Every animated value below is handed to its child as a lambda rather than a value.
+ * That keeps the reads in the layout and draw phases, so a state change costs one
+ * recomposition and the following 400 ms of animation cost none. Passing any of them
+ * as a plain value re-introduces a recomposition per frame - verify with the Layout
+ * Inspector after touching this file.
+ */
 @Composable
 fun FloatingBottomNavigationDefault(
     state: BottomNavState,
     onLeftClick: () -> Unit,
     onMiddleClick: () -> Unit,
     onRightClick: () -> Unit,
+    addWord: AddWordState,
+    search: SearchState,
+    orderedLanguages: List<Language>,
+    addRecentLanguage: (String) -> Unit,
     modifier: Modifier = Modifier,
     parentHeight: Dp
 ) {
-    val backgroundBoxHeight by animateDpAsState(
-        targetValue = if (state == BottomNavState.AddWord) parentHeight else 60.dp,
-        animationSpec = NavBarAnimation.slideDpSpec,
+    val transition = updateTransition(state, label = "navBar")
+
+    val backgroundBoxHeight by transition.animateDp(
+        transitionSpec = { NavBarAnimation.slideDpSpec },
         label = "backgroundBoxHeight"
-    )
-    val boxTopPadding by animateDpAsState(
-        targetValue = if (state == BottomNavState.AddWord) 35.dp else 0.dp,
-        animationSpec = NavBarAnimation.slideDpSpec,
+    ) { if (it == BottomNavState.AddWord) parentHeight else COLLAPSED_HEIGHT }
+
+    val boxTopPadding by transition.animateDp(
+        transitionSpec = { NavBarAnimation.slideDpSpec },
         label = "boxTopPadding"
-    )
+    ) { if (it == BottomNavState.AddWord) PANEL_TOP_INSET else 0.dp }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -94,317 +90,140 @@ fun FloatingBottomNavigationDefault(
             .height { backgroundBoxHeight + 10.dp },
         contentAlignment = Alignment.BottomCenter
     ) {
+        var targetWidth by remember { mutableStateOf(CENTER_BUTTON_SIZE) }
+        MeasureAvailableWidth(fraction = BAR_WIDTH_FRACTION) { width -> targetWidth = width }
 
-        var targetWidth by remember { mutableStateOf(70.dp) }
-        MeasureAvailableWidth(fraction = 0.85f) { width ->
-            targetWidth = width
-        }
-        val width by animateDpAsState(
-            targetValue =
-                when (state) {
-                    BottomNavState.Default -> 70.dp
-                    BottomNavState.Search -> targetWidth
-                    BottomNavState.AddWord -> 70.dp
-                },
-            animationSpec = NavBarAnimation.defaultDpTween,
+        val width by transition.animateDp(
+            transitionSpec = { NavBarAnimation.defaultDpTween },
             label = "centerWidth"
-        )
-        val bias by animateFloatAsState(
-            targetValue =
-                when (state) {
-                    BottomNavState.Default -> 0f
-                    BottomNavState.Search -> 1f
-                    BottomNavState.AddWord -> 0f
-                },
-            animationSpec = NavBarAnimation.tweenFloatSpec,
+        ) { if (it == BottomNavState.Search) targetWidth else CENTER_BUTTON_SIZE }
+
+        val bias by transition.animateFloat(
+            transitionSpec = { NavBarAnimation.tweenFloatSpec },
             label = "centerBias"
-        )
-        val rotation by animateFloatAsState(
-            targetValue = when (state) {
-                BottomNavState.Default -> 0f
-                BottomNavState.Search -> 45f
-                BottomNavState.AddWord -> 0f
-            },
-            animationSpec = NavBarAnimation.tweenFloatSpec,
-            label = "centerRotation"
-        )
-        val offsetY by animateDpAsState(
-            targetValue = when (state) {
-                BottomNavState.Default -> 0.dp
-                BottomNavState.Search -> 0.dp
-                BottomNavState.AddWord -> 5.dp
-            },
-            animationSpec = NavBarAnimation.slideDpSpec,
-            label = "centerWidth"
-        )
-        val iconsTint = rememberBottomNavTint(state)
+        ) { if (it == BottomNavState.Search) 1f else 0f }
 
-        BackgroundSurface(
-            state = { state },
+        val rotation by transition.animateFloat(
+            transitionSpec = { NavBarAnimation.tweenFloatSpec },
+            label = "centerRotation"
+        ) { if (it == BottomNavState.Search) 45f else 0f }
+
+        val offsetY by transition.animateDp(
+            transitionSpec = { NavBarAnimation.slideDpSpec },
+            label = "centerOffsetY"
+        ) { if (it == BottomNavState.AddWord) 5.dp else 0.dp }
+
+        val addIconAlpha by transition.animateFloat(
+            transitionSpec = { NavBarAnimation.tweenFloatSpec },
+            label = "addIconAlpha"
+        ) { if (it == BottomNavState.AddWord) 0f else 1f }
+
+        val onSurface = MaterialTheme.colorScheme.onSurface
+        val onPrimary = MaterialTheme.colorScheme.onPrimary
+        val iconsTint by transition.animateColor(
+            transitionSpec = { NavBarAnimation.defaultTweenColor },
+            label = "iconsTint"
+        ) { if (it == BottomNavState.Default) onSurface else onPrimary }
+
+        PanelSurface(
             height = { backgroundBoxHeight },
-            { boxTopPadding },
-            bottomPadding = { offsetY })
+            topPadding = { boxTopPadding },
+            bottomPadding = { offsetY }
+        ) {
+            AddWordPanel(
+                isExpanded = state == BottomNavState.AddWord,
+                addWord = addWord,
+                orderedLanguages = orderedLanguages,
+                addRecentLanguage = addRecentLanguage
+            )
+        }
+
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.85f)
+                .fillMaxWidth(BAR_WIDTH_FRACTION)
                 .height { backgroundBoxHeight + 10.dp }
         ) {
-            AnimatedCenterButton(
+            NavCenterButton(
                 width = { width },
                 rotation = { rotation },
                 bias = { bias },
+                addIconAlpha = { addIconAlpha },
                 onMiddleClick = onMiddleClick
             )
 
             Box(
                 Modifier
                     .fillMaxSize()
-                    .align(Alignment.TopCenter), contentAlignment = Alignment.BottomCenter
+                    .align(Alignment.TopCenter),
+                contentAlignment = Alignment.BottomCenter
             ) {
                 NavIconsRow(
                     state = { state },
-                    iconsTint = { iconsTint.value },
+                    iconsTint = { iconsTint },
                     onLeftClick = onLeftClick,
                     onRightClick = onRightClick
                 )
 
-                StaticSearchField(
-                    state = { state })
+                NavSearchField(
+                    state = { state },
+                    search = search
+                )
             }
-
         }
     }
 }
 
+/** Rounded card behind the bar; grows to full height when the add-word panel opens. */
 @Composable
-private fun BoxScope.BackgroundSurface(
-    state: () -> BottomNavState,
+private fun BoxScope.PanelSurface(
     height: () -> Dp,
     topPadding: () -> Dp,
-    bottomPadding: () -> Dp
+    bottomPadding: () -> Dp,
+    content: @Composable () -> Unit
 ) {
-    val isExpanded = state() == BottomNavState.AddWord
-
-    val expansionProgress by animateFloatAsState(
-        targetValue = if (isExpanded) 1f else 0f,
-        animationSpec = tween(350),
-        label = "expansionProgress"
-    )
-
     Surface(
-        shape = RoundedCornerShape(30.dp),
+        shape = PANEL_CORNER,
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 4.dp,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier
-            .fillMaxWidth(0.85f)
+            .fillMaxWidth(BAR_WIDTH_FRACTION)
             .align(Alignment.Center)
             .paddingLayout(top = { topPadding() }, bottom = { bottomPadding() })
             .height { height() }
-            .clip(RoundedCornerShape(30.dp))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 35.dp)
+                .padding(top = PANEL_TOP_INSET)
         ) {
-            Box(
-                modifier = Modifier
-                    .graphicsLayer {
-                        val maxOffset = 200.dp.toPx()
-                        translationY = (1f - expansionProgress) * maxOffset
-                    }
-                    .alpha(expansionProgress)
-            ) {
-                AddWordContent()
-            }
+            content()
         }
     }
 }
 
-@Composable
-private fun AddWordContent() {
-    Column(
-        modifier = Modifier.fillMaxHeight(),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            "Add word",
-            modifier = Modifier.padding(16.dp),
-            color = MaterialTheme.colorScheme.onSurface,
-            style = Theme.typography.h1
-        )
-        WordInputField(
-            modifier = Modifier.padding(start = 24.dp, end = 24.dp),
-            value = "",
-            onValueChange = { },
-            onIconClick = { },
-            borderColor = Theme.colors.primary
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        RoundedPrimaryButton(
-            modifier = Modifier.padding(bottom = 2.dp),
-            text = "Add",
-            onClick = { },
-            enabled = true
-        )
-    }
-}
-
-@Composable
-fun BoxScope.AnimatedCenterButton(
-    width: () -> Dp,
-    rotation: () -> Float,
-    bias: () -> Float,
-    onMiddleClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .height(70.dp)
-            .size { width() }
-            .align(Alignment.TopCenter)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary)
-            .clickable { onMiddleClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = "Add",
-            modifier = Modifier
-                .size(36.dp)
-                .graphicsLayer {
-                    rotationZ = rotation()
-                    val max = width().roundToPx() / 2 - size.width
-                    translationX = max * bias()
-                },
-            tint = MaterialTheme.colorScheme.onPrimary
-        )
-    }
-}
-
-@Composable
-private fun NavIconsRow(
-    state: () -> BottomNavState,
-    iconsTint: () -> Color,
-    onLeftClick: () -> Unit,
-    onRightClick: () -> Unit
-) {
-
-    val animatedPadding by animateDpAsState(
-        if (state() == BottomNavState.Default) 32.dp else 20.dp, NavBarAnimation.defaultDpTween
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height { 70.dp }
-            .layout { measurable, constraints ->
-                val paddingPx = animatedPadding.roundToPx()
-                val newConstraints = constraints.offset(
-                    horizontal = -paddingPx * 2
-                )
-                val placeable = measurable.measure(newConstraints)
-                layout(
-                    width = placeable.width + paddingPx * 2, height = placeable.height
-                ) {
-                    placeable.placeRelative(paddingPx, 0)
-                }
-            },
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AnimatedVisibility(
-            visible = state() != BottomNavState.AddWord, enter = fadeIn(), exit = fadeOut()
-        ) {
-            IconButton(onClick = onLeftClick) {
-                Icon(
-                    Icons.Default.Search, "Search", modifier = Modifier
-                        .size(34.dp)
-                        .graphicsLayer {
-                            colorFilter = ColorFilter.tint(iconsTint())
-                        })
-            }
-        }
-
-        Spacer(Modifier.weight(1f))
-
-        Spacer(Modifier.width(16.dp))
-
-        AnimatedVisibility(
-            visible = state() == BottomNavState.Default, enter = fadeIn(), exit = fadeOut()
-        ) {
-            IconButton(onClick = onRightClick) {
-                Icon(
-                    Icons.Default.Person, "Profile", modifier = Modifier.size(34.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BoxScope.StaticSearchField(
-    state: () -> BottomNavState
-) {
-    var text by remember { mutableStateOf("") }
-    AnimatedVisibility(state() == BottomNavState.Search) {
-        PrimaryTextField(
-            value = text,
-            onValueChange = { text = it },
-            placeholder = "Start typing…",
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 70.dp, end = 70.dp)
-                .align(Alignment.CenterStart),
-            style = Theme.typography.h2
-        )
-    }
-}
-
-@Composable
-fun MeasureAvailableWidth(fraction: Float = 1f, onWidthMeasured: (Dp) -> Unit) {
-    Layout(content = {}, modifier = Modifier.fillMaxWidth(fraction)) { _, c ->
-        onWidthMeasured(c.maxWidth.toDp())
-        layout(c.maxWidth, 0) {}
-    }
-}
-
-@Composable
-fun MeasureAvailableHeight(fraction: Float = 1f, onHeightMeasured: (Dp) -> Unit) {
-    Layout(content = {}, modifier = Modifier.fillMaxHeight(fraction)) { _, c ->
-        onHeightMeasured(c.maxHeight.toDp())
-        layout(0, c.maxHeight) {}
-    }
-}
-
-@Composable
-fun rememberBottomNavTint(state: BottomNavState): Animatable<Color, AnimationVector4D> {
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    val onPrimary = MaterialTheme.colorScheme.onPrimary
-
-    val anim = remember { Animatable(onSurface) }
-
-    LaunchedEffect(state) {
-        val target = if (state == BottomNavState.Default) onSurface else onPrimary
-        anim.animateTo(
-            targetValue = target, animationSpec = NavBarAnimation.defaultTweenColor
-        )
-    }
-
-    return anim
-}
+private fun previewAddWord(
+    wordInput: String = "",
+    wordLanguageCode: String? = null
+) = AddWordState(
+    state = { AddWordUiState(word = wordInput, wordLanguageCode = wordLanguageCode) },
+    onWordChange = {}, onTranslationChange = {},
+    onWordLanguageSelected = {}, onTranslationLanguageSelected = {},
+    onTranslateTranslation = {},
+    onAddWord = {}
+)
 
 @Preview
 @Composable
-fun PreviewBottomNav() {
+private fun PreviewBottomNav() {
     MittOrdTheme {
         FloatingBottomNavigationDefault(
-            BottomNavState.Default,
-            onLeftClick = {},
-            onMiddleClick = {},
-            onRightClick = {},
+            state = BottomNavState.Default,
+            onLeftClick = {}, onMiddleClick = {}, onRightClick = {},
+            addWord = previewAddWord(),
+            search = SearchState({ "" }, {}, {}),
+            orderedLanguages = LANGUAGES,
+            addRecentLanguage = {},
             parentHeight = 700.dp
         )
     }
@@ -412,13 +231,15 @@ fun PreviewBottomNav() {
 
 @Preview
 @Composable
-fun PreviewBottomNavSearch() {
+private fun PreviewBottomNavSearch() {
     MittOrdTheme {
         FloatingBottomNavigationDefault(
-            BottomNavState.Search,
-            onLeftClick = {},
-            onMiddleClick = {},
-            onRightClick = {},
+            state = BottomNavState.Search,
+            onLeftClick = {}, onMiddleClick = {}, onRightClick = {},
+            addWord = previewAddWord(),
+            search = SearchState({ "hund" }, {}, {}),
+            orderedLanguages = LANGUAGES,
+            addRecentLanguage = {},
             parentHeight = 700.dp
         )
     }
@@ -426,13 +247,15 @@ fun PreviewBottomNavSearch() {
 
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
-fun PreviewBottomNavAddWord() {
+private fun PreviewBottomNavAddWord() {
     MittOrdTheme {
         FloatingBottomNavigationDefault(
-            BottomNavState.AddWord,
-            onLeftClick = {},
-            onMiddleClick = {},
-            onRightClick = {},
+            state = BottomNavState.AddWord,
+            onLeftClick = {}, onMiddleClick = {}, onRightClick = {},
+            addWord = previewAddWord(wordInput = "hund", wordLanguageCode = "no"),
+            search = SearchState({ "" }, {}, {}),
+            orderedLanguages = LANGUAGES,
+            addRecentLanguage = {},
             parentHeight = 490.dp
         )
     }
