@@ -48,14 +48,12 @@ fun MittOrdTheme(
     content: @Composable () -> Unit
 ) {
     val customColors = rememberMittOrdColors(darkTheme)
-    val brushes = rememberMittOrdBrushes(customColors)
     val typography = mittOrdTypography(customColors)
 
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     CompositionLocalProvider(
         LocalMittOrdColors provides customColors,
-        LocalMittOrdBrushes provides brushes,
         LocalMittOrdTypography provides typography
     ) {
         MaterialTheme(

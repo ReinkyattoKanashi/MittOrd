@@ -48,15 +48,8 @@ interface SemanticObjectDao {
     fun observeAllWithTranslations(): Flow<List<SemanticObjectWithTranslations>>
 
     @Transaction
-    @Query("SELECT * FROM semantic_object ORDER BY createdAt DESC")
-    suspend fun getAllObjectsWithTranslations(): List<SemanticObjectWithTranslations>
-
-    @Transaction
     @Query("SELECT * FROM semantic_object WHERE id = :id")
     suspend fun getObjectWithTranslations(id: Long): SemanticObjectWithTranslations?
-
-    @Query("SELECT * FROM translation WHERE objectId = :objectId ORDER BY languageCode ASC")
-    suspend fun getTranslationsForObject(objectId: Long): List<TranslationEntity>
 
     // ---------- UPDATE ----------
 

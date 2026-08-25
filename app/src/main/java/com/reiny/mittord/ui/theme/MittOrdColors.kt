@@ -26,8 +26,8 @@ class MittOrdColors(
     val warning: Color,
     val success: Color,
 
-    val textPrimary: Color = onPrimary,
-    val textSecondary: Color = onPrimary
+    val textPrimary: Color = onSurface,
+    val textSecondary: Color = onSurface
 )
 
 val LocalMittOrdColors = compositionLocalOf<MittOrdColors> {

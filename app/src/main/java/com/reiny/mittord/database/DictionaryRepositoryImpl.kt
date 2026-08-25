@@ -20,9 +20,6 @@ class DictionaryRepositoryImpl @Inject constructor(
     override suspend fun getWordWithTranslations(id: Long): SemanticObjectWithTranslations? =
         dao.getObjectWithTranslations(id)
 
-    override suspend fun getTranslations(objectId: Long): List<TranslationEntity> =
-        dao.getTranslationsForObject(objectId)
-
     override suspend fun addWord(
         baseWord: String,
         translation: String,

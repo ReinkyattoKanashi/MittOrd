@@ -56,7 +56,8 @@ fun PrimaryTextField(
             disabledTextColor = contentColor.copy(alpha = 0.5f),
             cursorColor = cursorColor
         ),
-        textStyle = style
+        // color is intentionally dropped: it lets the *TextColor values above apply
+        textStyle = style.copy(color = Color.Unspecified)
     )
 }
 

@@ -45,16 +45,16 @@ class AppPreferences @Inject constructor(@ApplicationContext context: Context) {
         prefs.edit { putString(AppConstants.PREF_RECENT_LANGS, updated.joinToString(",")) }
     }
 
+    // distinctBy: language name is used as a LazyColumn key in the picker,
+    // so duplicates (e.g. learning == native) would crash it.
     fun orderedLanguages(allLanguages: List<Language> = LANGUAGES): List<Language> {
-        val learning = learningLanguage
-        val native = nativeLanguage
-        val recent = recentLanguageNames()
-        val priority = listOf(learning, native)
-        val prioritySet = priority.toSet()
-        val recentFiltered = recent.filter { it !in prioritySet }.take(5)
-        val pinnedNames = (priority + recentFiltered).toSet()
-        return (priority + recentFiltered).mapNotNull { name -> allLanguages.find { it.name == name } } +
-            allLanguages.filter { it.name !in pinnedNames }
+        val priority = listOf(learningLanguage, nativeLanguage).distinct()
+        val recentFiltered = recentLanguageNames().filter { it !in priority }.distinct().take(5)
+        val pinnedNames = priority + recentFiltered
+        val pinnedSet = pinnedNames.toSet()
+        return (pinnedNames.mapNotNull { name -> allLanguages.find { it.name == name } } +
+            allLanguages.filter { it.name !in pinnedSet })
+            .distinctBy { it.name }
     }
 
     private fun recentLanguageNames(): List<String> =
