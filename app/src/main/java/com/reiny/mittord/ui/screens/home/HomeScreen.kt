@@ -57,7 +57,10 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val words by viewModel.words.collectAsState()
-    val nav by viewModel.nav.collectAsState()
+    val navState by viewModel.navState.collectAsState()
+    // Read through lambdas below, never here: touching them in this scope would put
+    // every keystroke on the whole screen's recomposition path.
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val addWord by viewModel.addWord.collectAsState()
     val orderedLanguages by viewModel.orderedLanguages.collectAsState()
 
@@ -97,8 +100,8 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(nav.state) {
-        if (nav.state == BottomNavState.Default) keyboardController?.hide()
+    LaunchedEffect(navState) {
+        if (navState == BottomNavState.Default) keyboardController?.hide()
     }
 
     var lastBackMs by remember { mutableLongStateOf(0L) }
@@ -134,7 +137,7 @@ fun HomeScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-                .then(if (nav.state == BottomNavState.Search) Modifier.imePadding() else Modifier)
+                .then(if (navState == BottomNavState.Search) Modifier.imePadding() else Modifier)
                 .fillMaxSize()
         ) {
             // parentHeight is the AddWord expansion target, so it must be the height
@@ -142,7 +145,7 @@ fun HomeScreen(
             // and following it would rewrite this state on every frame of the IME
             // animation, recomposing the whole box along with the navigation bar.
             var targetHeight by remember { mutableStateOf(0.dp) }
-            val trackHeight = nav.state != BottomNavState.Search
+            val trackHeight = navState != BottomNavState.Search
             MeasureAvailableHeight(fraction = 1f) { height ->
                 if (trackHeight) targetHeight = height
             }
@@ -166,18 +169,12 @@ fun HomeScreen(
             }
 
             FloatingBottomNavigationDefault(
-                state = nav.state,
+                state = navState,
                 onLeftClick = viewModel::onSearchClick,
                 onMiddleClick = viewModel::onCenterClick,
                 onRightClick = onSettingsClick,
                 addWord = AddWordState(
-                    wordInput = addWord.word,
-                    translationInput = addWord.translation,
-                    wordLanguageCode = addWord.wordLanguageCode,
-                    translationLanguageCode = addWord.translationLanguageCode,
-                    wordLanguageIsAuto = addWord.wordLanguageIsAuto,
-                    translationLanguageIsAuto = addWord.translationLanguageIsAuto,
-                    isTranslating = addWord.isTranslating,
+                    state = { addWord },
                     onWordChange = viewModel::onWordChange,
                     onTranslationChange = viewModel::onTranslationChange,
                     onWordLanguageSelected = viewModel::onWordLanguageSelected,
@@ -186,7 +183,7 @@ fun HomeScreen(
                     onAddWord = viewModel::addWord
                 ),
                 search = SearchState(
-                    query = nav.searchQuery,
+                    query = { searchQuery },
                     onQueryChange = viewModel::onSearchChange,
                     onClear = viewModel::clearSearch
                 ),

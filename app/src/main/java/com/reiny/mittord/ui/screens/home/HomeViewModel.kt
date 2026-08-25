@@ -40,12 +40,14 @@ class HomeViewModel @Inject constructor(
     private val seedDatabaseUseCase: SeedDatabaseUseCase
 ) : ViewModel() {
 
+    // Kept apart on purpose: navState changes on a tap, searchQuery on every
+    // keystroke. Merged into one object, typing would recompose everything that
+    // reads the nav state - the whole home screen included.
     private val _navState = MutableStateFlow(BottomNavState.Default)
-    private val _searchQuery = MutableStateFlow("")
+    val navState: StateFlow<BottomNavState> = _navState.asStateFlow()
 
-    val nav: StateFlow<NavUiState> =
-        combine(_navState, _searchQuery) { state, query -> NavUiState(state, query) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, NavUiState())
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     private val _addWord = MutableStateFlow(AddWordUiState())
     val addWord: StateFlow<AddWordUiState> = _addWord.asStateFlow()

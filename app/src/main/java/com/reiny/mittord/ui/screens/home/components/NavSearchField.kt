@@ -57,7 +57,7 @@ internal fun BoxScope.NavSearchField(
         ) {
             Spacer(Modifier.width(70.dp))
             PrimaryTextField(
-                value = search.query,
+                value = search.query(),
                 onValueChange = search.onQueryChange,
                 placeholder = placeholderSearch,
                 modifier = Modifier
@@ -67,7 +67,7 @@ internal fun BoxScope.NavSearchField(
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 cursorColor = MaterialTheme.colorScheme.onPrimary
             )
-            if (search.query.isNotEmpty()) {
+            if (search.query().isNotEmpty()) {
                 IconButton(onClick = search.onClear) {
                     Icon(
                         imageVector = Icons.Default.Close,

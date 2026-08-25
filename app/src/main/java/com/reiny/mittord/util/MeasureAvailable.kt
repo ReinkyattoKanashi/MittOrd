@@ -13,8 +13,11 @@ import androidx.compose.ui.unit.Dp
  * Caveat: the callback fires during the measure phase, so writing its result into a
  * State that is read during composition makes every size change recompose the caller.
  * Only feed them values that are stable while the screen is interactive - see the
- * guard around parentHeight in HomeScreen. BoxWithConstraints is the idiomatic
- * replacement and should take over once the navigation bar is restructured.
+ * guard around parentHeight in HomeScreen.
+ *
+ * BoxWithConstraints is not a drop-in replacement: it re-invokes its whole content
+ * lambda whenever the incoming constraints change, which is exactly what has to be
+ * avoided while the IME animates a padded parent. The guard above is the point.
  */
 
 @Composable

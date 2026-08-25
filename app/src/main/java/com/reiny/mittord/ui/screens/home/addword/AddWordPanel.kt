@@ -70,6 +70,7 @@ internal fun AddWordPanel(
     orderedLanguages: List<Language>,
     addRecentLanguage: (String) -> Unit
 ) {
+    val input = addWord.state()
     val wordFocusRequester = remember { FocusRequester() }
     var picker by remember { mutableStateOf<PickerRequest?>(null) }
 
@@ -116,8 +117,8 @@ internal fun AddWordPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 LanguageFlagButton(
-                    languageCode = addWord.wordLanguageCode,
-                    isAuto = addWord.wordLanguageIsAuto,
+                    languageCode = input.wordLanguageCode,
+                    isAuto = input.wordLanguageIsAuto,
                     onClick = { picker = PickerRequest.WordLanguage }
                 )
                 Spacer(Modifier.width(8.dp))
@@ -125,7 +126,7 @@ internal fun AddWordPanel(
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(wordFocusRequester),
-                    value = addWord.wordInput,
+                    value = input.word,
                     onValueChange = addWord.onWordChange,
                     placeholder = stringResource(R.string.placeholder_word)
                 )
@@ -146,20 +147,20 @@ internal fun AddWordPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 LanguageFlagButton(
-                    languageCode = addWord.translationLanguageCode,
-                    isAuto = addWord.translationLanguageIsAuto,
+                    languageCode = input.translationLanguageCode,
+                    isAuto = input.translationLanguageIsAuto,
                     onClick = { picker = PickerRequest.TranslationLanguage }
                 )
                 Spacer(Modifier.width(8.dp))
                 WordInputField(
                     modifier = Modifier.weight(1f),
-                    value = addWord.translationInput,
+                    value = input.translation,
                     onValueChange = addWord.onTranslationChange,
                     placeholder = stringResource(R.string.placeholder_translation)
                 )
                 TranslateButton(
                     onClick = { picker = PickerRequest.TranslateInto },
-                    isLoading = addWord.isTranslating
+                    isLoading = input.isTranslating
                 )
             }
         }
@@ -175,23 +176,23 @@ internal fun AddWordPanel(
                 modifier = Modifier.padding(bottom = 2.dp),
                 text = stringResource(R.string.btn_add),
                 onClick = addWord.onAddWord,
-                enabled = addWord.wordInput.isNotBlank()
+                enabled = input.word.isNotBlank()
             )
         }
     }
 
     picker?.let { request ->
         val shownCode = if (request is PickerRequest.WordLanguage) {
-            addWord.wordLanguageCode
+            input.wordLanguageCode
         } else {
-            addWord.translationLanguageCode
+            input.translationLanguageCode
         }
         LanguagePickerSheet(
             title = stringResource(request.titleRes),
             selected = langNameForCode(shownCode).orEmpty(),
             isAutoSelected = when (request) {
-                PickerRequest.WordLanguage -> addWord.wordLanguageIsAuto
-                PickerRequest.TranslationLanguage -> addWord.translationLanguageIsAuto
+                PickerRequest.WordLanguage -> input.wordLanguageIsAuto
+                PickerRequest.TranslationLanguage -> input.translationLanguageIsAuto
                 PickerRequest.TranslateInto -> false
             },
             showAutoOption = request != PickerRequest.TranslateInto,

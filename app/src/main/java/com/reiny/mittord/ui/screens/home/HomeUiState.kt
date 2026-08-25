@@ -1,7 +1,5 @@
 package com.reiny.mittord.ui.screens.home
 
-import com.reiny.mittord.ui.screens.home.components.BottomNavState
-
 /** A single row of the word list, already prepared for display. */
 data class WordListItem(
     val id: Long,
@@ -25,9 +23,4 @@ data class AddWordUiState(
     val wordLanguageIsAuto: Boolean = true,
     val translationLanguageIsAuto: Boolean = true,
     val isTranslating: Boolean = false
-)
-
-data class NavUiState(
-    val state: BottomNavState = BottomNavState.Default,
-    val searchQuery: String = ""
 )

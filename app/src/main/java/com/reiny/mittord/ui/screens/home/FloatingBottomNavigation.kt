@@ -206,13 +206,7 @@ private fun previewAddWord(
     wordInput: String = "",
     wordLanguageCode: String? = null
 ) = AddWordState(
-    wordInput = wordInput,
-    translationInput = "",
-    wordLanguageCode = wordLanguageCode,
-    translationLanguageCode = null,
-    wordLanguageIsAuto = true,
-    translationLanguageIsAuto = true,
-    isTranslating = false,
+    state = { AddWordUiState(word = wordInput, wordLanguageCode = wordLanguageCode) },
     onWordChange = {}, onTranslationChange = {},
     onWordLanguageSelected = {}, onTranslationLanguageSelected = {},
     onTranslateTranslation = {},
@@ -227,7 +221,7 @@ private fun PreviewBottomNav() {
             state = BottomNavState.Default,
             onLeftClick = {}, onMiddleClick = {}, onRightClick = {},
             addWord = previewAddWord(),
-            search = SearchState("", {}, {}),
+            search = SearchState({ "" }, {}, {}),
             orderedLanguages = LANGUAGES,
             addRecentLanguage = {},
             parentHeight = 700.dp
@@ -243,7 +237,7 @@ private fun PreviewBottomNavSearch() {
             state = BottomNavState.Search,
             onLeftClick = {}, onMiddleClick = {}, onRightClick = {},
             addWord = previewAddWord(),
-            search = SearchState("hund", {}, {}),
+            search = SearchState({ "hund" }, {}, {}),
             orderedLanguages = LANGUAGES,
             addRecentLanguage = {},
             parentHeight = 700.dp
@@ -259,7 +253,7 @@ private fun PreviewBottomNavAddWord() {
             state = BottomNavState.AddWord,
             onLeftClick = {}, onMiddleClick = {}, onRightClick = {},
             addWord = previewAddWord(wordInput = "hund", wordLanguageCode = "no"),
-            search = SearchState("", {}, {}),
+            search = SearchState({ "" }, {}, {}),
             orderedLanguages = LANGUAGES,
             addRecentLanguage = {},
             parentHeight = 490.dp
