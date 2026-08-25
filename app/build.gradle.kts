@@ -24,6 +24,33 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Release signing is wired only when both the keystore and its credentials are
+    // present, so `assembleRelease` still works for anyone who clones the project
+    // without them - it just falls back to the debug key.
+    val releaseStoreFile = providers.gradleProperty("MITTORD_STORE_FILE").orNull?.takeIf { it.isNotBlank() }
+        ?.let { file(it) } ?: rootProject.file("mittord.jks")
+    // blank counts as missing: the template file ships with empty values, and an
+    // empty password would otherwise fail later with a far less obvious error
+    fun signingProperty(name: String) =
+        providers.gradleProperty(name).orNull?.takeIf { it.isNotBlank() }
+
+    val releaseStorePassword = signingProperty("MITTORD_STORE_PASSWORD")
+    val releaseKeyAlias = signingProperty("MITTORD_KEY_ALIAS")
+    val releaseKeyPassword = signingProperty("MITTORD_KEY_PASSWORD")
+    val hasReleaseSigning = releaseStoreFile.exists() &&
+        releaseStorePassword != null && releaseKeyAlias != null && releaseKeyPassword != null
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             versionNameSuffix = "-debug"
@@ -36,7 +63,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn("No release signing credentials found, falling back to the debug key")
+                signingConfigs.getByName("debug")
+            }
         }
     }
     applicationVariants.all {

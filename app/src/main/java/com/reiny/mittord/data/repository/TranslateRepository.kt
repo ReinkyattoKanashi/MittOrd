@@ -8,6 +8,7 @@ import com.reiny.mittord.domain.model.Language
 import com.reiny.mittord.domain.util.flagForCode
 import com.reiny.mittord.domain.util.normalizeCode
 import com.reiny.mittord.util.AppConstants
+import retrofit2.HttpException
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -37,19 +38,34 @@ class TranslateRepositoryImpl @Inject constructor(
             if (raw.isBlank() || raw == AppConstants.LANG_CODE_UNDETERMINED) null
             else normalizeCode(raw)
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) Log.e(TAG, "detectLanguage: ${e.message}")
+            if (BuildConfig.DEBUG) Log.e(TAG, "detectLanguage failed: ${e.describe()}")
             null
         }
     }
 
     override suspend fun translateText(text: String, targetLanguageCode: String): String =
         withContext(Dispatchers.IO) {
-            val body = apiService.detectAndTranslate(
-                client = "gtx", sl = "auto", tl = targetLanguageCode, dt = "t", q = text
-            )
-            val json = JSONArray(body.string())
-            json.getJSONArray(0).getJSONArray(0).getString(0)
+            try {
+                val body = apiService.detectAndTranslate(
+                    client = "gtx", sl = "auto", tl = targetLanguageCode, dt = "t", q = text
+                )
+                val json = JSONArray(body.string())
+                json.getJSONArray(0).getJSONArray(0).getString(0)
+            } catch (e: Exception) {
+                // The use case turns this into a failed Result and the screen shows a
+                // snackbar, which hides what actually went wrong - so name it here.
+                if (BuildConfig.DEBUG) Log.e(TAG, "translateText failed: ${e.describe()}")
+                throw e
+            }
         }
+
+    /**
+     * A bare message rarely says enough: a rate limit, an offline device and a
+     * changed response format all end up as different exception types here.
+     */
+    private fun Exception.describe(): String =
+        "${this::class.java.simpleName}: $message" +
+            if (this is HttpException) " (HTTP ${code()})" else ""
 
     override suspend fun getSupportedLanguages(): List<Language> {
         cachedLanguages?.let { return it }
